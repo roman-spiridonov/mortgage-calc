@@ -1,0 +1,25 @@
+{
+  "name": "mortgage-calc",
+  "version": "0.0.1",
+  "description": "Страница и скрипт для расчета более выгодного варианта: **Ипотека или Аренда квартиры**.",
+  "main": "server.js",
+  "dependencies": {
+    "marked": "^0.3.6",
+    "node-static": "^0.7.9"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/roman-spiridonov/mortgage-calc.git"
+  },
+  "author": "Roman Spiridonov",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/roman-spiridonov/mortgage-calc/issues"
+  },
+  "homepage": "https://github.com/roman-spiridonov/mortgage-calc#readme"
+}

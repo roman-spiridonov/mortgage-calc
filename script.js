@@ -2,8 +2,8 @@
     google.charts.load('current', { 'packages': ['corechart'] });
     google.charts.setOnLoadCallback(run);
 
-    qs = (s) => document.body.querySelector(s); // shortcut for querySelector
-    qs('form').onsubmit = () => run();
+	qs = (s) => document.body.querySelector(s); // shortcut for querySelector
+	qs('form').onsubmit = () => run();
 
     var data;
     var option = 3;
