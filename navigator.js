@@ -1,9 +1,7 @@
-"use strict";
-
-$(function() {
+var Navigator = (function() {
     function Navigator($contentEl, nav = []) {
         this.$_contentEl = $contentEl;
-        this._nav = nav; // {1: {trigger: $trigger1, href: "#page1", pageUrl: 'templates/page1.hml'}, 2: { ... }, ... }
+        this._nav = nav; // {1: {trigger: $trigger1, href: "#page1", pageUrl: 'templates/page1.hml', isLoaded: false}, 2: { ... }, ... }
         this._count = nav.length || 0;
         this._active = null; // active trigger
     }
@@ -32,27 +30,33 @@ $(function() {
         }
 
         let id = this._count++;
-        let self = this;
-        this._nav[id] = { trigger: $trigger, href: href, pageUrl: pageUrl };
+        this._nav[id] = { trigger: $trigger, href: href, pageUrl: pageUrl, isLoaded: false };
 
         $trigger.click(() => {
-            self.$_contentEl.load(pageUrl, function(response, status, xhr) {
-            	onLoaded.apply(this, arguments);
-                if (status == "error") {
-                    console.error(xhr.status + " " + xhr.statusText);
-                    return;
-                }
+            if (this._active !== null) {
+                this._nav[this._active].trigger.toggleClass('active');
+                $(this._nav[this._active].href, this.$_contentEl).hide();
+            }
 
-                if (self._active !== null) {
-                    self._nav[self._active].trigger.toggleClass('active');
-                }
+            if (!this._nav[id].isLoaded) {
+                this.$_contentEl.append(`<div id="${href.slice(1)}"></div>`);
+                $(href, this.$_contentEl).load(pageUrl, (response, status, xhr) => {
+                    onLoaded.apply(self, arguments);
+                    if (status == "error") {
+                        console.error(xhr.status + " " + xhr.statusText);
+                        return;
+                    }
+                });
+            } else { // HTML was already loaded
+                $(href, this.$_contentEl).show();
+            }
 
-                self._active = id;
-                $trigger.addClass('active');
-            });
-
+            this._active = id;
+            this._nav[id].isLoaded = true;
+            $trigger.addClass('active');
             return false;
         });
+
         $trigger.on("remove", () => {
             this.removeRoute(id);
         });
@@ -112,9 +116,6 @@ $(function() {
         return [id, href, pageUrl, isFound];
     };
 
-    let mainNavigator = new Navigator($(".content").first());
-    mainNavigator.addRoute($(".nav__description"), "templates/description.html");
-    mainNavigator.addRoute($(".nav__calculator"), "templates/calculator.html");
-    mainNavigator.activate("#calculator");
+    return Navigator;
 
-});
+})();
