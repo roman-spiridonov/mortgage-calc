@@ -1,4 +1,8 @@
 {
-  "output": "webapp",
-  "port": 8080
+  "src": "src",
+  "dest": "webapp",
+  "port": 8080,
+  "isDevelopment": true,
+  "mainScriptBlockLabel": "main",
+  "subordinateScriptBlockLabel": "sub"
 }

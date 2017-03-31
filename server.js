@@ -4,10 +4,11 @@ const http = require('http');
 // var url = require('url');
 // var querystring = require('querystring');
 const static = require('node-static');
-const file = new static.Server('.', {
+const config = require('./config');
+
+const file = new static.Server(config.isDevelopment ? 'src/' : 'webapp/', {
   cache: 0
 });
-const config = require('./config');
 
 function accept(req, res) {
   file.serve(req, res);
