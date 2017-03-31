@@ -1,3 +1,5 @@
+"use strict";
+
 var Navigator = (function() {
   function Navigator($contentEl, nav = []) {
     this.$_contentEl = $contentEl;
@@ -41,10 +43,9 @@ var Navigator = (function() {
       if (!this._nav[id].isLoaded) {
         this.$_contentEl.append(`<div id="${href.slice(1)}"></div>`);
         $(href, this.$_contentEl).load(pageUrl, (response, status, xhr) => {
-          onLoaded.apply(self, arguments);
-          if (status == "error") {
+          onLoaded.apply(this, arguments);
+          if (status === "error") {
             console.error(xhr.status + " " + xhr.statusText);
-            return;
           }
         });
       } else { // HTML was already loaded
@@ -86,7 +87,7 @@ var Navigator = (function() {
       id = arguments[0];
       if (id in this._nav) {
         href = this._nav[id].href;
-        pageUrl = this._nav[key].pageUrl;
+        pageUrl = this._nav[id].pageUrl;
         isFound = true;
       }
 

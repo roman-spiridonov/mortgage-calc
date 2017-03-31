@@ -7,10 +7,15 @@
     "marked": "^0.3.6",
     "node-static": "^0.7.9"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "jshint": "^2.9.4",
+    "jshint-loader": "^0.8.4",
+    "jshint-stylish": "^2.2.1"
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js"
+    "start": "node server.js",
+    "jshint": "jshint ./ --reporter=./node_modules/jshint-stylish || true"
   },
   "repository": {
     "type": "git",
@@ -21,5 +26,11 @@
   "bugs": {
     "url": "https://github.com/roman-spiridonov/mortgage-calc/issues"
   },
-  "homepage": "https://github.com/roman-spiridonov/mortgage-calc#readme"
+  "homepage": "https://github.com/roman-spiridonov/mortgage-calc#readme",
+  "keywords": [
+    "mortgage",
+    "rent",
+    "financial",
+    "calculator"
+  ]
 }

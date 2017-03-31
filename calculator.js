@@ -1,16 +1,18 @@
-var calculator = (function() {
+"use strict";
+
+let calculator = (function() {
 
   function Calculator() {
-    this._paramsMap; // [f, Gm, h, w, R, A, B, S]
-    this._option;
+    this._option = 1;
+    this._params = [];
     this._isInit = false;
   }
 
 
   Calculator.prototype.findn = function() { // deposit
-    [f, Gm, h, w, R, A, B, S] = this._paramsMap.values();
-    var fh = f / h;
-    if (this._option == 1 || this._option == 2) {
+    let [f, Gm, h, w, R, A, B, S] = this._params;
+    let fh = f / h;
+    if (this._option === 1 || this._option === 2) {
       return Math.log((B + S * (fh - 1)) / (B + A * (1 - 1 / fh))) / Math.log(fh) || (S - A) / B;
     }
 
@@ -18,55 +20,55 @@ var calculator = (function() {
   };
 
   Calculator.prototype.findm = function() { // credit
-    [f, Gm, h, w, R, A, B, S] = this._paramsMap.values();
+    let [f, Gm, h, w, R, A, B, S] = this._params;
 
-    if (this._option == 1) {
+    if (this._option === 1) {
       return Math.log(1 - Gm * (S - A) / (B + R)) / Math.log(1 / (1 + Gm));
-    } else if (this._option == 2) {
+    } else if (this._option === 2) {
       return Math.log(1 - (S - A) / (B + R) * (1 - h / (1 + Gm))) / Math.log(h / (1 + Gm));
-    } else if (this._option == 3) {
+    } else if (this._option === 3) {
       return Math.log(1 - (S - A) / (B + R) * (1 - w / (1 + Gm))) / Math.log(w / (1 + Gm));
     }
   };
 
   Calculator.prototype.fn = function(n) { // m(n) for arbitrary S
-    [f, Gm, h, w, R, A, B, S] = this._paramsMap.values();
-    var fh = f / h;
-    if (this._option == 1) { // pay B+R each month
+    let [f, Gm, h, w, R, A, B, S] = this._params;
+    let fh = f / h;
+    if (this._option === 1) { // pay B+R each month
       return Math.log(1 - Gm * (this.Sn(n) - A) / (B + R)) / Math.log(1 / (1 + Gm));
-    } else if (this._option == 2) { // pay (B+R)*h each month
+    } else if (this._option === 2) { // pay (B+R)*h each month
       return Math.log(1 - (this.Sn(n) - A) / (B + R) * (1 - h / (1 + Gm))) / Math.log(h / (1 + Gm));
-    } else if (this._option == 3) { // w - speed of wages
+    } else if (this._option === 3) { // w - speed of wages
       return Math.log(1 - (this.Sn(n) - A) / (B + R) * (1 - w / (1 + Gm))) / Math.log(w / (1 + Gm));
     }
   };
 
   Calculator.prototype.Sn = function(n) { // S(n) - what cost of property one can afford when saving for n years at given params
-    [f, Gm, h, w, R, A, B, S] = this._paramsMap.values();
-    var fh = f / h;
-    if (this._option == 1 || this._option == 2) {
+    let [f, Gm, h, w, R, A, B, S] = this._params;
+    let fh = f / h;
+    if (this._option === 1 || this._option === 2) {
       return B / h * (Math.pow(fh, n) - 1) / (fh - 1) + A * Math.pow(fh, n - 1) * h || B * n + A;
-    } else if (this._option == 3) {
-      return B * Math.pow(w / h, n) / w * (Math.pow(f / w, x) - 1) / (f / w - 1) + A * Math.pow(fh, n - 1) * h || B * n + A;
+    } else if (this._option === 3) {
+      return B * Math.pow(w / h, n) / w * (Math.pow(f / w, n) - 1) / (f / w - 1) + A * Math.pow(fh, n - 1) * h || B * n + A;
     }
 
   };
 
   Calculator.prototype.calcData = function() {
-    [f, Gm, h, w, R, A, B, S] = this._paramsMap.values();
+    let [f, Gm, h, w, R, A, B, S] = this._params;
     // Calculate
-    var n = this.findn();
-    var m = this.findm();
+    let n = this.findn();
+    let m = this.findm();
 
     // TODO: move to presentation layer (calculator-exec)
-    var nText = (n != false && !isNaN(n) ? Math.ceil(n) + ' мес., или ' + Math.ceil(n / 12) + ' лет' : 'см. по графику');
-    var mText = (m != false && !isNaN(m) ? Math.ceil(m) + ' мес., или ' + Math.ceil(m / 12) + ' лет' : 'см. по графику');
+    let nText = (n !== false && !isNaN(n) ? Math.ceil(n) + ' мес., или ' + Math.ceil(n / 12) + ' лет' : 'см. по графику');
+    let mText = (m !== false && !isNaN(m) ? Math.ceil(m) + ' мес., или ' + Math.ceil(m / 12) + ' лет' : 'см. по графику');
     qs('#resn').innerHTML = nText;
     qs('#resm').innerHTML = mText;
     qs('#fracmn').innerHTML = (m !== false && n !== false ? (m / n).toFixed(2) : '-');
 
     // Data for charts
-    data = new google.visualization.DataTable();
+    let data = new google.visualization.DataTable();
     data.addColumn('number', 'Месяц');
     data.addColumn('number', 'Кривая безразличия');
     data.addColumn('number', 'm(n)');
@@ -74,8 +76,8 @@ var calculator = (function() {
     data.addColumn('number', 'm(n)_current');
     data.addColumn('number', 'S(n)_current');
 
-    for (var i = 1; i < 251; i++) {
-      if (Math.ceil(n) == i) {
+    for (let i = 1; i < 251; i++) {
+      if (Math.ceil(n) === i) {
         data.addRow([i, i, this.fn(i, f, Gm, h, w, R, A, B, S), Math.round(S), m, S]);
       } else {
         data.addRow([i, i, this.fn(i, f, Gm, h, w, R, A, B, S), Math.round(this.Sn(i, f, Gm, h, w, R, A, B, S)), m, null]);
@@ -91,7 +93,7 @@ var calculator = (function() {
       data = this._data;
     }
     // Chart m(n)
-    var chart_mn = new google.visualization.ComboChart(document.getElementById('chart_mn'));
+    let chart_mn = new google.visualization.ComboChart(document.getElementById('chart_mn'));
     chart_mn.draw(data, {
       title: 'График отношения сроков кредита (m) и вклада (n)',
       chartArea: { 'width': '80%', 'height': '80%' },
@@ -109,7 +111,7 @@ var calculator = (function() {
     });
 
     // Chart S(n)
-    var chart_S = new google.visualization.ComboChart(document.getElementById('chart_S'));
+    let chart_S = new google.visualization.ComboChart(document.getElementById('chart_S'));
     chart_S.draw(data, {
       title: 'График стоимости (S), которую можно себе позволить при накоплении n лет, тыс. руб.',
 
@@ -136,17 +138,8 @@ var calculator = (function() {
    */
   Calculator.prototype.init = function(params, option) {
     this._option = option || 1;
-    this._paramsMap = new Map([
-      ['f', params[0]],
-      ['Gm', params[1]],
-      ['h', params[2]],
-      ['w', params[3]],
-      ['R', params[4]],
-      ['A', params[5]],
-      ['B', params[6]],
-      ['S', params[7]]
-    ]);
-
+    this._params = params;  // [f, Gm, h, w, R, A, B, S]
+    
     this._isInit = true;
   };
 
@@ -155,7 +148,7 @@ var calculator = (function() {
       console.error("Initialize your Calculator instance before using it.");
       return false;
     }
-    var data = this.calcData();
+    let data = this.calcData();
     this.drawCharts(data);
 
     return true;
