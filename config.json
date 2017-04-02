@@ -2,7 +2,13 @@
   "src": "src",
   "dest": "webapp",
   "port": 8080,
-  "isDevelopment": true,
+  "isDevelopment": false,
   "mainScriptBlockLabel": "main",
-  "subordinateScriptBlockLabel": "sub"
+  "subordinateScriptBlockLabel": "sub",
+  "formula": {
+    "mathjax": {},
+    "delims": ["\\$\\$", "<math>"],
+    "output": "svg"
+  }
+
 }
