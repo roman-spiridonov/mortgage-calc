@@ -1,33 +1,38 @@
 "use strict";
 
-const fs = require('fs');
-const async = require('async');
 const util = require('util');
 const EventEmitter = require('events').EventEmitter;
-const config = require('../config');
-const helpers = require('./helpers');
-
 const mjAPI = require("mathjax-node");
-mjAPI.config({
-  MathJax: config.formula.mathjax
-});
-mjAPI.start();
+
+
+/**
+ * @typedef {Object} FormulaConverter~options
+ * @property {Object} mathjax - set of standard MathJax options
+ * @property {string[]} delims - an array of formula delimeters (e.g. "$$", "<math>").
+ * If delimeter is a tag "<*>", converter considers that it should be properly closed with "</*>"
+ * @property {string} output - desired output formula format (e.g. "svg")
+ */
 
 /**
  * Formula Converter provides API to parse formulas from the provided strings and convert them to other formats.
  * The module is a wrapper around MathJax-node.
+ * Pure class (no side effects, only options).
  * Supported input formats: TeX.
  * Supported output formats: MathML.
  * @constructor
+ * @param {FormulaConverter~options} options
  */
-function FormulaConverter() {
-  this._outstandingHandlers = 0;  // counter for outstanding async operations on files
-  this._delims = config.formula.delims || ["\\$\\$"];  // array e.g. ["$$", "<math>"]
-  this._formulasMap = new Map();  // map of file names to lists of parsed formulas,
-  // e.g. "file.c" -> [{formula: "x^2", startIndex: 0, endIndex: 3}, {formula: "y^2", startIndex: 5, endIndex: 8}]
-  this._fileMap = new Map();  // map of file contents
 
+function FormulaConverter(options) {
+  this._outstandingHandlers = 0;  // counter for outstanding async operations on files
+  this._delims = options.delims || ["\\$\\$"];  // array e.g. ["$$", "<math>"]
   this._re = this._setUpRegExp();  // /\$\$([^$]+)\$\$/ig  // --> $$(f1)$$ ... $$(f2)$$
+  this._output = options.output || 'mathml';
+
+  mjAPI.config({
+    MathJax: options.mathjax
+  });
+  mjAPI.start();
 }
 
 util.inherits(FormulaConverter, EventEmitter);
@@ -52,58 +57,49 @@ FormulaConverter.prototype._setUpRegExp = function () {
 };
 
 /**
- * Load and parse formulas from a specified file.
- * @param {string} file - text string with path to a file
- * @param {function} cb - callback that receives an array of parsed formulas
- */
-FormulaConverter.prototype.parseFile = function (file, cb) {
-  this._outstandingHandlers = 0;
-  this._formulasMap.set(file, []);
-  fs.readFile(file, {encoding: 'utf-8'}, (fileStr) => {
-    this._fileMap.set(file, {contents: fileStr, dest: file});
-    this.parse(fileStr, (parsedFormulas) => {
-      this._formulasMap.get(file).push(parsedFormulas);
-      cb(parsedFormulas);
-    });
-  });
-};
-
-
-/**
  * @callback FormulaConverter~parseCallback
- * @param {ParsedFormula[]} - array of parsed formulas
+ * @param {Error|null} err - returns error as a first argument in case it occurred, null if everything was ok.
+ * @param {ParsedFormula[]} [parsedFormula] - array of parsed formulas
  */
 
 /**
- * @function
  * Given a string, returns parsed formulas from the string to callback.
  * @param {string} fileStr - string with formulas
  * @param {FormulaConverter~parseCallback} cb - callback that receives an array of parsed formulas
  */
 FormulaConverter.prototype.parse = function (fileStr, cb) {
   let formula;
+  this._outstandingHandlers = 0;
   this._parsedFormulasCache = [];  // keeping state between callbacks
 
   while (formula = this._re.exec(fileStr)) {
-    mjAPI.typeset({
+    let typesetParameter = {
       math: formula[1],
       format: "TeX", // "inline-TeX", "MathML"
-      mml: true,
       state: {  // state can be accessed from callback
         sourceFormula: formula[0],
         startIndex: formula.index,     // start of $$ block to replace
         endIndex: this._re.lastIndex,  // end of $$ block to replace (index immediately after the block)
       }
-    }, this._collectMath);
+    };
+    try {
+      typesetParameter[this._getOutputProperty(this._output)] = true;
+    } catch (err) {
+      cb(err);
+      return;
+    }
+
+    mjAPI.typeset(typesetParameter, this._collectMath.bind(this));
     this._outstandingHandlers++;
   }
 
   // when all formulas are parsed, relies on ready event internally to invoke the cb
   this.once('ready', (parsedFormulas) => {
     delete this._parsedFormulasCache;  // clear cache
-    cb(parsedFormulas);
+    cb(null, parsedFormulas);
   });
 };
+
 /**
  * Updates parsed formula map in an object. To be used as a callback to mjAPI.typset function.
  * @param {Object} mjData - result of MathJax formula parsing
@@ -116,7 +112,6 @@ FormulaConverter.prototype._collectMath = function (mjData, options) {
     this._outstandingHandlers--;
     return;
   }
-  let parsedFormulas = this._parsedFormulasCache;
   /**
    * @name ParsedFormula
    * @type Object
@@ -125,12 +120,13 @@ FormulaConverter.prototype._collectMath = function (mjData, options) {
    * @property {number} startIndex - the index at which sourceFormula appears in the text
    * @property {number} endIndex - the index immediately after the sourceFormula in the text
    */
-  parsedFormulas.push({
+
+  this._parsedFormulasCache.push({
     sourceFormula: options.state.sourceFormula,
-    formula: mjData.mml,
+    formula: mjData[this._getOutputProperty(this._output)],
     startIndex: options.state.startIndex,
     endIndex: options.state.endIndex
-  }); // TODO: handle via config.formula.output
+  });
 
   // Since this call is async, decrease the counter of async operations to make sure all formulas are processed
   this._outstandingHandlers--;
@@ -139,57 +135,37 @@ FormulaConverter.prototype._collectMath = function (mjData, options) {
    * @event FormulaConverter#ready
    * @type {ParsedFormula[]}
    */
-  if (this._outstandingHandlers === 0) this.emit('ready', parsedFormulas);
+  if (this._outstandingHandlers === 0) this.emit('ready', this._parsedFormulasCache);
 };
-
 
 /**
- * Stores files with converted formulas. Removes successfully saved files from the formula map.
+ * Returns mjAPI property name where formula is stored.
+ * @param {string} output - config setting
+ * @returns {string}
+ * @throws {Error} - when config parameter is not recognized
+ * @private
  */
-// TODO: specify destination
-FormulaConverter.prototype.storeResults = function () {
-  for (let file of this._formulasMap.keys()) {
-    let preparedFileStr = this._fileMap.get(file).contents;
-    // Prepare file string for saving
-    // // Way 1: manipulate string using stored indices
-    // let accumulatedShift = 0;  // initial formula insertion indices change as we change the string in cycle
-    // this._formulasMap.get(file).forEach((el) => {
-    //   preparedFileStr = helpers.spliceString(preparedFileStr, accumulatedShift + el.startIndex, el.endIndex - el.startIndex, el.formula);
-    //   accumulatedShift += el.formula.length - el.sourceFormula.length; // new indices must be shifted after splicing the new formula string
-    // });
-
-    // Way 2: rely on the fact that the consecutive order of formulas have not changed
-    let index = 0;
-    preparedFileStr = preparedFileStr.replace(this._re, (str, p, offset) => {
-      return this._formulasMap.get(file)[index++].formula;
-    });
-
-    // Save prepared file contents to disk
-    let dest = this._fileMap.get(file).dest;
-    fs.writeFile(dest, preparedFileStr, {encoding: 'utf-8'}, () => this.clearCache(file));
-
-    // Remove successfully saved file from the map
+// TODO: handle more configs
+FormulaConverter.prototype._getOutputProperty = function (output) {
+  let res = 'mml';
+  switch (output) {
+    case 'mml':
+    case 'mathml':
+      res = 'mml';
+      break;
+    case 'svg':
+      res = 'svg';
+      break;
+    default:
+      throw new Error(`Unrecognized output parameter ${this._output}`);
   }
 
+  return res;
 };
-
-
-/**
- * Removes specified files from state.
- * @param {Array} files - array of strings which are paths to files.
- */
-FormulaConverter.prototype.clearCache = function (files) {
-  if(files.forEach) {
-    files.forEach((file) => this._formulasMap.delete(file));
-  } else {
-    this._formulasMap.delete(files);
-  }
-};
-
 
 if (!module.parent) {
-  let fc = new FormulaConverter();
-  fc.parseFile('src/templates/description.html', () => fc.storeResults());
+  // TODO: formulaConverter "$$x^2$$ $$x^3$$" --delims $$ --input TeX --output MathML
+
 } else {
-  module.exports = FormulaConverter;
+  exports.FormulaConverter = FormulaConverter;
 }

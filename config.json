@@ -8,7 +8,7 @@
   "formula": {
     "mathjax": {},
     "delims": ["\\$\\$", "<math>"],
-    "output": "svg"
+    "output": "mathml"
   }
 
 }
