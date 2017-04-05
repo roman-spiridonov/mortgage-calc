@@ -97,6 +97,7 @@ FormulaWrapper.prototype.clearCache = function (files) {
 };
 
 if (!module.parent) {
+  // TODO: formulaConverter "$$x^2$$ $$x^3$$" --delims $$ --input TeX --output MathML
   let fw = new FormulaWrapper(config.formula);
   fw.parseFile('src/templates/description.html', (err) => {
     if(err) throw err;

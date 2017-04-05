@@ -3,6 +3,7 @@
 const util = require('util');
 const EventEmitter = require('events').EventEmitter;
 const mjAPI = require("mathjax-node");
+const config = require('../config');
 
 
 /**
@@ -28,6 +29,7 @@ function FormulaConverter(options) {
   this._delims = options.delims || ["\\$\\$"];  // array e.g. ["$$", "<math>"]
   this._re = this._setUpRegExp();  // /\$\$([^$]+)\$\$/ig  // --> $$(f1)$$ ... $$(f2)$$
   this._output = options.output || 'mathml';
+  this._linebreaks = options.linebreaks || true;
 
   mjAPI.config({
     MathJax: options.mathjax
@@ -77,6 +79,7 @@ FormulaConverter.prototype.parse = function (fileStr, cb) {
     let typesetParameter = {
       math: formula[1],
       format: "TeX", // "inline-TeX", "MathML"
+      linebreaks: this._linebreaks,
       state: {  // state can be accessed from callback
         sourceFormula: formula[0],
         startIndex: formula.index,     // start of $$ block to replace
@@ -158,7 +161,7 @@ FormulaConverter.prototype._collectMath = function (mjData, options) {
  * @throws {Error} - when config parameter is not recognized
  * @private
  */
-// TODO: handle more configs
+// TODO: handle more configs (png, plain text)
 FormulaConverter.prototype._getOutputProperty = function () {
   let res;
   switch (this._output) {
@@ -180,7 +183,30 @@ FormulaConverter.prototype._getOutputProperty = function () {
 };
 
 if (!module.parent) {
-  // TODO: formulaConverter "$$x^2$$ $$x^3$$" --delims $$ --input TeX --output MathML
+  // <cmd> "x^2 + x" --input TeX --output MathML
+  let argv = require('yargs')
+      .demandCommand(1)
+      .usage("Usage: $0 [options] \"<your formula>\" > file", config.getMetaYargsObj([
+        'formula.input',
+        'formula.output',
+        'formula.delims',
+        'formula.linebreaks']))
+      .example("$0 \"x^2\" -i TeX -o svg")
+      .example("cat file1 | $0 -i TeX > file2")
+      .alias('f', 'file').alias('o', 'output').alias('i', 'input')
+      .help('h')
+      .alias('h', 'help')
+      .epilog('copyright 2017')
+      .argv
+    ;
+
+  let options = config.getOptionsObj(argv, "formula");
+
+  let fc = new FormulaConverter(options);
+  fc.parse(argv._[0], (err, parsedFormulas) => {
+    if(err) throw err;
+    console.log(parsedFormulas);
+  });
 
 } else {
   exports.FormulaConverter = FormulaConverter;
