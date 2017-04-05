@@ -1,4 +1,6 @@
-{
+"use strict";
+
+module.exports = {
   "src": "src",
   "dest": "webapp",
   "port": 8080,
@@ -8,7 +10,6 @@
   "formula": {
     "mathjax": {},
     "delims": ["\\$\\$", "<math>"],
-    "output": "mathml"
+    "output": "text"
   }
-
-}
+};

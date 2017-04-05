@@ -73,6 +73,7 @@ FormulaConverter.prototype.parse = function (fileStr, cb) {
   this._parsedFormulasCache = [];  // keeping state between callbacks
 
   while (formula = this._re.exec(fileStr)) {
+    // TODO: extract ParsedFormula class and create an extended instance of it at this point
     let typesetParameter = {
       math: formula[1],
       format: "TeX", // "inline-TeX", "MathML"
@@ -83,7 +84,11 @@ FormulaConverter.prototype.parse = function (fileStr, cb) {
       }
     };
     try {
-      typesetParameter[this._getOutputProperty(this._output)] = true;
+      let prop = this._getOutputProperty();
+      if(prop === 'html') {
+        typesetParameter.css = true;
+      }
+      typesetParameter[prop] = true;
     } catch (err) {
       cb(err);
       return;
@@ -101,7 +106,7 @@ FormulaConverter.prototype.parse = function (fileStr, cb) {
 };
 
 /**
- * Updates parsed formula map in an object. To be used as a callback to mjAPI.typset function.
+ * Updates parsed formulas cache in an object. To be used as a callback to mjAPI.typset function.
  * @param {Object} mjData - result of MathJax formula parsing
  * @param {Object} options - initial options for MathJax parsing; state is saved in options.state
  * @fires FormulaConverter#ready - indicates that parsing has been complete
@@ -115,18 +120,26 @@ FormulaConverter.prototype._collectMath = function (mjData, options) {
   /**
    * @name ParsedFormula
    * @type Object
+   * @proprety {string} output - formula format
    * @property {string} sourceFormula - the source formula (including delimeters)
    * @property {string} formula - the converted formula (without delimeters)
    * @property {number} startIndex - the index at which sourceFormula appears in the text
    * @property {number} endIndex - the index immediately after the sourceFormula in the text
+   * @property {string} [css] - css string for HTML output
    */
 
-  this._parsedFormulasCache.push({
+  let prop = this._getOutputProperty();
+  let parsedFormula = {
+    output: this._output,
     sourceFormula: options.state.sourceFormula,
-    formula: mjData[this._getOutputProperty(this._output)],
+    formula: mjData[prop],
     startIndex: options.state.startIndex,
     endIndex: options.state.endIndex
-  });
+  };
+  if(prop === 'html') {
+    parsedFormula.css = mjData.css;
+  }
+  this._parsedFormulasCache.push(parsedFormula);
 
   // Since this call is async, decrease the counter of async operations to make sure all formulas are processed
   this._outstandingHandlers--;
@@ -139,16 +152,16 @@ FormulaConverter.prototype._collectMath = function (mjData, options) {
 };
 
 /**
- * Returns mjAPI property name where formula is stored.
+ * Returns mjAPI property name where formula is stored based on output config setting.
  * @param {string} output - config setting
  * @returns {string}
  * @throws {Error} - when config parameter is not recognized
  * @private
  */
 // TODO: handle more configs
-FormulaConverter.prototype._getOutputProperty = function (output) {
-  let res = 'mml';
-  switch (output) {
+FormulaConverter.prototype._getOutputProperty = function () {
+  let res;
+  switch (this._output) {
     case 'mml':
     case 'mathml':
       res = 'mml';
@@ -156,8 +169,11 @@ FormulaConverter.prototype._getOutputProperty = function (output) {
     case 'svg':
       res = 'svg';
       break;
+    case 'html':
+      res = 'html';
+      break;
     default:
-      throw new Error(`Unrecognized output parameter ${this._output}`);
+      throw new Error(`Unrecognized output parameter '${this._output}'`);
   }
 
   return res;

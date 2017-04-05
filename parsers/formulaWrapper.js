@@ -29,18 +29,17 @@ FormulaWrapper.prototype.constructor = FormulaWrapper;
  * @param {function} cb - callback that receives an array of parsed formulas
  */
 FormulaWrapper.prototype.parseFile = function (file, cb) {
-  this._formulasMap.set(file, []);
   fs.readFile(file, {encoding: 'utf-8'}, (err, fileStr) => {
     if(err) {
       cb(err);
       return;
     }
-    this._fileMap.set(file, {contents: fileStr, dest: file});
     this.parse(fileStr, (err, parsedFormulas) => {
       if(err) {
         cb(err);
         return;
       }
+      this._fileMap.set(file, {contents: fileStr, dest: file});
       this._formulasMap.set(file, parsedFormulas);
       cb(null, parsedFormulas);
     });
@@ -53,7 +52,9 @@ FormulaWrapper.prototype.parseFile = function (file, cb) {
 // TODO: specify destination
 FormulaWrapper.prototype.storeResults = function () {
   for (let file of this._formulasMap.keys()) {
-    let preparedFileStr = this._fileMap.get(file).contents;
+    let parsedFormulas = this._formulasMap.get(file);
+    let preparedFile = this._fileMap.get(file);
+    let preparedFileStr = preparedFile.contents;
     // Prepare file string for saving
     // // Way 1: manipulate string using stored indices
     // let accumulatedShift = 0;  // initial formula insertion indices change as we change the string in cycle
@@ -65,11 +66,16 @@ FormulaWrapper.prototype.storeResults = function () {
     // Way 2: rely on the fact that the consecutive order of formulas have not changed
     let index = 0;
     preparedFileStr = preparedFileStr.replace(this._re, (str, p, offset) => {
-      return this._formulasMap.get(file)[index++].formula;
+      return parsedFormulas[index++].formula;
     });
 
+    // Add CSS for HTML output inline to file
+    if(parsedFormulas[0].css) {
+      preparedFileStr += `\n<style>${parsedFormulas[0].css}</style>`;
+    }
+
     // Save prepared file contents to disk
-    let dest = this._fileMap.get(file).dest;
+    let dest = preparedFile.dest;
     fs.writeFile(dest, preparedFileStr, {encoding: 'utf-8'}, () => this.clearCache(file));
 
     // Remove successfully saved file from the map
@@ -92,7 +98,10 @@ FormulaWrapper.prototype.clearCache = function (files) {
 
 if (!module.parent) {
   let fw = new FormulaWrapper(config.formula);
-  fw.parseFile('src/templates/description.html', () => fw.storeResults());
+  fw.parseFile('src/templates/description.html', (err) => {
+    if(err) throw err;
+    fw.storeResults();
+  });
 } else {
   module.exports = (options) => new FormulaWrapper(options);
 }
