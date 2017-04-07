@@ -4,6 +4,7 @@ const util = require('util');
 const EventEmitter = require('events').EventEmitter;
 const mjAPI = require("mathjax-node");
 const config = require('../config');
+const helpers = require('./helpers');
 
 
 /**
@@ -30,6 +31,7 @@ function FormulaConverter(options) {
   this._re = this._setUpRegExp();  // /\$\$([^$]+)\$\$/ig  // --> $$(f1)$$ ... $$(f2)$$
   this._output = options.output || 'mathml';
   this._linebreaks = options.linebreaks || false;
+  this._parsedFormulasCache = {};  // keeping state between callbacks
 
   mjAPI.config({
     MathJax: options.mathjax
@@ -59,6 +61,20 @@ FormulaConverter.prototype._setUpRegExp = function () {
 };
 
 /**
+ * Returns the formula inside the matched delims.
+ * @param matches - array of formula regexp matches
+ * @private
+ */
+FormulaConverter.prototype._getMatchedRegExpGroup = function (matches) {
+  for (let i = 1; i < matches.length; i++) {
+    if (matches[i] !== undefined) {
+      return matches[i];
+    }
+  }
+  return undefined;
+};
+
+/**
  * @callback FormulaConverter~parseCallback
  * @param {Error|null} err - returns error as a first argument in case it occurred, null if everything was ok.
  * @param {ParsedFormula[]} [parsedFormula] - array of parsed formulas
@@ -72,23 +88,27 @@ FormulaConverter.prototype._setUpRegExp = function () {
 FormulaConverter.prototype.parse = function (fileStr, cb) {
   let formula;
   this._outstandingHandlers = 0;
-  this._parsedFormulasCache = [];  // keeping state between callbacks
+  let hash = helpers.hashCode(fileStr);
+  this._parsedFormulasCache[hash] = [];
 
+  let formulasCount = 0;
   while (formula = this._re.exec(fileStr)) {
+    formulasCount++;
     // TODO: extract ParsedFormula class and create an extended instance of it at this point
     let typesetParameter = {
-      math: formula[1],
+      math: this._getMatchedRegExpGroup(formula),
       format: "TeX", // "inline-TeX", "MathML"
       linebreaks: this._linebreaks,
       state: {  // state can be accessed from callback
         sourceFormula: formula[0],
         startIndex: formula.index,     // start of $$ block to replace
         endIndex: this._re.lastIndex,  // end of $$ block to replace (index immediately after the block)
+        hashId: hash
       }
     };
     try {
       let prop = this._getOutputProperty();
-      if(prop === 'html') {
+      if (prop === 'html') {
         typesetParameter.css = true;
       }
       typesetParameter[prop] = true;
@@ -102,10 +122,14 @@ FormulaConverter.prototype.parse = function (fileStr, cb) {
   }
 
   // when all formulas are parsed, relies on ready event internally to invoke the cb
-  this.once('ready', (parsedFormulas) => {
-    delete this._parsedFormulasCache;  // clear cache
-    cb(null, parsedFormulas);
-  });
+  if (formulasCount > 0) {
+    this.once('ready', (parsedFormulas) => {
+      delete this._parsedFormulasCache[hash];  // clear cache
+      cb(null, parsedFormulas);
+    });
+  } else {
+    cb(new Error("The string contains no formulas"));
+  }
 };
 
 /**
@@ -139,10 +163,11 @@ FormulaConverter.prototype._collectMath = function (mjData, options) {
     startIndex: options.state.startIndex,
     endIndex: options.state.endIndex
   };
-  if(prop === 'html') {
+  if (prop === 'html') {
     parsedFormula.css = mjData.css;
   }
-  this._parsedFormulasCache.push(parsedFormula);
+
+  this._parsedFormulasCache[options.state.hashId].push(parsedFormula);
 
   // Since this call is async, decrease the counter of async operations to make sure all formulas are processed
   this._outstandingHandlers--;
@@ -151,7 +176,7 @@ FormulaConverter.prototype._collectMath = function (mjData, options) {
    * @event FormulaConverter#ready
    * @type {ParsedFormula[]}
    */
-  if (this._outstandingHandlers === 0) this.emit('ready', this._parsedFormulasCache);
+  if (this._outstandingHandlers === 0) this.emit('ready', this._parsedFormulasCache[options.state.hashId]);
 };
 
 /**
@@ -204,7 +229,7 @@ if (!module.parent) {
 
   let fc = new FormulaConverter(options);
   fc.parse(argv._[0], (err, parsedFormulas) => {
-    if(err) throw err;
+    if (err) throw err;
     console.log(parsedFormulas);
   });
 

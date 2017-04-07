@@ -1,3 +1,4 @@
+/*jshint bitwise: false*/
 "use strict";
 
 function Helpers() {
@@ -13,8 +14,23 @@ function Helpers() {
  * @param {string} newSubStr - the string to insert
  * @return {string} - a resulting string with the inserted substring
  */
-Helpers.prototype.spliceString = function(string, start, delCount, newSubStr) {
+Helpers.prototype.spliceString = function (string, start, delCount, newSubStr) {
   return string.slice(0, start) + newSubStr + string.slice(start + Math.abs(delCount));
+};
+
+Helpers.prototype.hashCode = function (str) {
+  if (str.length === 0) {
+    return 0;
+  }
+
+  let hash = 0,
+    i, chr;
+  for (i = 0; i < str.length; i++) {
+    chr = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + chr;
+    hash |= 0; // Convert to 32bit integer
+  }
+  return Math.abs(hash);
 };
 
 module.exports = new Helpers();

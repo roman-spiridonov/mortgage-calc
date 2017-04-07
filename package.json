@@ -49,5 +49,8 @@
     "rent",
     "financial",
     "calculator"
-  ]
+  ],
+  "jest": {
+    "testEnvironment": "node"
+  }
 }
