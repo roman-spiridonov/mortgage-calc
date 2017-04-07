@@ -29,7 +29,7 @@ function FormulaConverter(options) {
   this._delims = options.delims || ["\\$\\$"];  // array e.g. ["$$", "<math>"]
   this._re = this._setUpRegExp();  // /\$\$([^$]+)\$\$/ig  // --> $$(f1)$$ ... $$(f2)$$
   this._output = options.output || 'mathml';
-  this._linebreaks = options.linebreaks || true;
+  this._linebreaks = options.linebreaks || false;
 
   mjAPI.config({
     MathJax: options.mathjax
