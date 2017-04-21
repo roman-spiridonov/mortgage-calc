@@ -26,17 +26,19 @@ const helpers = require('./helpers');
  */
 
 function FormulaConverter(options) {
-  this._outstandingHandlers = 0;  // counter for outstanding async operations on files
   this._delims = options.delims || ["\\$\\$"];  // array e.g. ["$$", "<math>"]
   this._re = this._setUpRegExp();  // /\$\$([^$]+)\$\$/ig  // --> $$(f1)$$ ... $$(f2)$$
   this._output = options.output || 'mathml';
   this._linebreaks = options.linebreaks || false;
+  this._outstandingHandlers = {};  // counter for outstanding async operations on files
   this._parsedFormulasCache = {};  // keeping state between callbacks
+  this._mathjax = options.mathjax || {};
 
   mjAPI.config({
-    MathJax: options.mathjax
+    MathJax: this._mathjax
   });
   mjAPI.start();
+
 }
 
 util.inherits(FormulaConverter, EventEmitter);
@@ -87,9 +89,9 @@ FormulaConverter.prototype._getMatchedRegExpGroup = function (matches) {
  */
 FormulaConverter.prototype.parse = function (fileStr, cb) {
   let formula;
-  this._outstandingHandlers = 0;
-  let hash = helpers.hashCode(fileStr);
+  let hash = helpers.hashCode(fileStr).toString();
   this._parsedFormulasCache[hash] = [];
+  this._outstandingHandlers[hash] = 0;
 
   let formulasCount = 0;
   while (formula = this._re.exec(fileStr)) {
@@ -103,7 +105,7 @@ FormulaConverter.prototype.parse = function (fileStr, cb) {
         sourceFormula: formula[0],
         startIndex: formula.index,     // start of $$ block to replace
         endIndex: this._re.lastIndex,  // end of $$ block to replace (index immediately after the block)
-        hashId: hash
+        hash: hash
       }
     };
     try {
@@ -118,13 +120,14 @@ FormulaConverter.prototype.parse = function (fileStr, cb) {
     }
 
     mjAPI.typeset(typesetParameter, this._collectMath.bind(this));
-    this._outstandingHandlers++;
+    this._outstandingHandlers[hash]++;
   }
 
   // when all formulas are parsed, relies on ready event internally to invoke the cb
   if (formulasCount > 0) {
-    this.once('ready', (parsedFormulas) => {
+    this.once('ready:' + hash, (parsedFormulas) => {
       delete this._parsedFormulasCache[hash];  // clear cache
+      delete this._outstandingHandlers[hash];
       cb(null, parsedFormulas);
     });
   } else {
@@ -139,9 +142,10 @@ FormulaConverter.prototype.parse = function (fileStr, cb) {
  * @fires FormulaConverter#ready - indicates that parsing has been complete
  */
 FormulaConverter.prototype._collectMath = function (mjData, options) {
+  let hash = options.state.hash;
   if (mjData.errors) {
     console.error(mjData.errors);
-    this._outstandingHandlers--;
+    this._outstandingHandlers[hash]--;
     return;
   }
   /**
@@ -167,16 +171,18 @@ FormulaConverter.prototype._collectMath = function (mjData, options) {
     parsedFormula.css = mjData.css;
   }
 
-  this._parsedFormulasCache[options.state.hashId].push(parsedFormula);
+  this._parsedFormulasCache[hash].push(parsedFormula);
 
   // Since this call is async, decrease the counter of async operations to make sure all formulas are processed
-  this._outstandingHandlers--;
+  this._outstandingHandlers[hash]--;
   /**
    * Ready event.
    * @event FormulaConverter#ready
    * @type {ParsedFormula[]}
    */
-  if (this._outstandingHandlers === 0) this.emit('ready', this._parsedFormulasCache[options.state.hashId]);
+  if (this._outstandingHandlers[hash] === 0) {
+    this.emit('ready:' + hash, this._parsedFormulasCache[hash]);
+  }
 };
 
 /**
@@ -208,22 +214,22 @@ FormulaConverter.prototype._getOutputProperty = function () {
 };
 
 if (!module.parent) {
-  // <cmd> "x^2 + x" --input TeX --output MathML
+  // <cmd> "$$x^2$$ + $$x$$" --input TeX --output MathML
   let argv = require('yargs')
-      .demandCommand(1)
-      .usage("Usage: $0 [options] \"<your formula>\" > file", config.getMetaYargsObj([
-        'formula.input',
-        'formula.output',
-        'formula.delims',
-        'formula.linebreaks']))
-      .example("$0 \"x^2\" -i TeX -o svg")
-      .example("cat file1 | $0 -i TeX > file2")
-      .alias('f', 'file').alias('o', 'output').alias('i', 'input')
-      .help('h')
-      .alias('h', 'help')
-      .epilog('copyright 2017')
-      .argv
-    ;
+    .demandCommand(1)
+    .usage("Usage: $0 [options] \"<your formula>\" > file", config.getMetaYargsObj([
+      'formula.input',
+      'formula.output',
+      'formula.delims',
+      'formula.linebreaks']))
+    .example("$0 \"x^2\" -i TeX -o svg")
+    .example("cat file1 | $0 -i TeX > file2")
+    .alias('f', 'file').alias('o', 'output').alias('i', 'input')
+    .help('h')
+    .alias('h', 'help')
+    .epilog('copyright 2017')
+    .argv
+  ;
 
   let options = config.getOptionsObj(argv, "formula");
 
