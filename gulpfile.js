@@ -13,7 +13,7 @@ const uglify = require('gulp-uglify');
 const babel = require('gulp-babel');
 const htmlReplace = require('gulp-html-replace');
 
-const config = require('./config');
+const config = require('./parsers/formula/config');
 
 const isDevelopment = config.isDevelopment;
 const src = config.src;

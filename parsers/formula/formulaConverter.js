@@ -3,8 +3,8 @@
 const util = require('util');
 const EventEmitter = require('events').EventEmitter;
 const mjAPI = require("mathjax-node");
-const config = require('../config');
-const helpers = require('./helpers');
+const config = require('./config');
+const helpers = require('../helpers');
 
 
 /**
@@ -37,14 +37,17 @@ function FormulaConverter(options) {
   mjAPI.config({
     MathJax: this._mathjax
   });
-  mjAPI.start();
 
+  this._started = false;
 }
 
+const _p = FormulaConverter.prototype;
 util.inherits(FormulaConverter, EventEmitter);
-FormulaConverter.prototype.constructor = FormulaConverter;
+_p.constructor = FormulaConverter;
 
-FormulaConverter.prototype._setUpRegExp = function () {
+_p._name = 'formula';
+
+_p._setUpRegExp = function () {
   let regexp = new RegExp();
   this._delims.forEach((delim, index) => {
     let closingChar = delim.charAt(delim.search(/[^\\]/));
@@ -67,7 +70,7 @@ FormulaConverter.prototype._setUpRegExp = function () {
  * @param matches - array of formula regexp matches
  * @private
  */
-FormulaConverter.prototype._getMatchedRegExpGroup = function (matches) {
+_p._getMatchedRegExpGroup = function (matches) {
   for (let i = 1; i < matches.length; i++) {
     if (matches[i] !== undefined) {
       return matches[i];
@@ -87,7 +90,7 @@ FormulaConverter.prototype._getMatchedRegExpGroup = function (matches) {
  * @param {string} fileStr - string with formulas
  * @param {FormulaConverter~parseCallback} cb - callback that receives an array of parsed formulas
  */
-FormulaConverter.prototype.parse = function (fileStr, cb) {
+_p.parse = function (fileStr, cb) {
   let formula;
   let hash = helpers.hashCode(fileStr).toString();
   this._parsedFormulasCache[hash] = [];
@@ -119,6 +122,10 @@ FormulaConverter.prototype.parse = function (fileStr, cb) {
       return;
     }
 
+    if(!this._started) {
+      mjAPI.start();
+      this._started = true;
+    }
     mjAPI.typeset(typesetParameter, this._collectMath.bind(this));
     this._outstandingHandlers[hash]++;
   }
@@ -128,6 +135,7 @@ FormulaConverter.prototype.parse = function (fileStr, cb) {
     this.once('ready:' + hash, (parsedFormulas) => {
       delete this._parsedFormulasCache[hash];  // clear cache
       delete this._outstandingHandlers[hash];
+      this._started = false;
       cb(null, parsedFormulas);
     });
   } else {
@@ -141,7 +149,7 @@ FormulaConverter.prototype.parse = function (fileStr, cb) {
  * @param {Object} options - initial options for MathJax parsing; state is saved in options.state
  * @fires FormulaConverter#ready - indicates that parsing has been complete
  */
-FormulaConverter.prototype._collectMath = function (mjData, options) {
+_p._collectMath = function (mjData, options) {
   let hash = options.state.hash;
   if (mjData.errors) {
     console.error(mjData.errors);
@@ -187,13 +195,12 @@ FormulaConverter.prototype._collectMath = function (mjData, options) {
 
 /**
  * Returns mjAPI property name where formula is stored based on output config setting.
- * @param {string} output - config setting
  * @returns {string}
  * @throws {Error} - when config parameter is not recognized
  * @private
  */
 // TODO: handle more configs (png, plain text)
-FormulaConverter.prototype._getOutputProperty = function () {
+_p._getOutputProperty = function () {
   let res;
   switch (this._output) {
     case 'mml':
@@ -212,6 +219,57 @@ FormulaConverter.prototype._getOutputProperty = function () {
 
   return res;
 };
+
+
+/**
+ * Return converted file as a string.
+ * @param fileStr {string} - input string
+ * @param cb
+ */
+_p.convert = function (fileStr, cb) {
+  let report = {
+    converter: this._name
+  };
+  report.parsedFormulas = [];
+  report.status = "success";
+
+  this.parse(fileStr, (err, parsedFormulas) => {
+    if (err) {
+      if (/no formulas/.test(err)) {
+        report.message = "No formulas found in the file";
+        return cb(null, fileStr, report);
+      }
+      report.status = "fatal";
+      report.message = err.message;
+      return cb(null, fileStr, report);
+    }
+    let preparedFileStr = fileStr;
+    // Prepare file string for saving
+    // // Way 1: manipulate string using stored indices
+    // let accumulatedShift = 0;  // initial formula insertion indices change as we change the string in cycle
+    // parsedFormulas.forEach((el) => {
+    //   preparedFileStr = helpers.spliceString(preparedFileStr, accumulatedShift + el.startIndex, el.endIndex - el.startIndex, el.formula);
+    //   accumulatedShift += el.formula.length - el.sourceFormula.length; // new indices must be shifted after splicing the new formula string
+    // });
+
+    // Way 2: rely on the fact that the consecutive order of formulas have not changed
+    let index = 0;
+    preparedFileStr = preparedFileStr.replace(this._re, (str, p, offset) => {
+      return parsedFormulas[index++].formula;
+    });
+
+    // Add CSS for HTML output inline to file
+    if (parsedFormulas[0].css) {
+      preparedFileStr += `\n<style>${parsedFormulas[0].css}</style>`;
+    }
+
+    // Construct report
+    report.parsedFormulas = parsedFormulas;
+
+    cb(null, preparedFileStr, report);
+  });
+};
+
 
 if (!module.parent) {
   // <cmd> "$$x^2$$ + $$x$$" --input TeX --output MathML
@@ -234,9 +292,9 @@ if (!module.parent) {
   let options = config.getOptionsObj(argv, "formula");
 
   let fc = new FormulaConverter(options);
-  fc.parse(argv._[0], (err, parsedFormulas) => {
+  fc.convert(argv._[0], (err, preparedFileStr, report) => {
     if (err) throw err;
-    console.log(parsedFormulas);
+    console.log(preparedFileStr);
   });
 
 } else {

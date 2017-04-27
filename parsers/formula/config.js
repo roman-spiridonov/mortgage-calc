@@ -69,7 +69,7 @@ Config.prototype.getDesc = function (prop) {
   if(!meta || !meta.desc) {
     return "No description available";
   }
-  return this.getMeta(prop).desc;
+  return meta.desc;
 };
 
 /**
@@ -80,7 +80,7 @@ Config.prototype.getType = function (prop) {
   if(!meta || !meta.type) {
     return "No type information available";
   }
-  return this.getMeta(prop).type;
+  return meta.type;
 };
 
 /**

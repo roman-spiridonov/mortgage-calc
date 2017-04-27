@@ -6,9 +6,9 @@ const
   sinon = require('sinon'),
 
   // Project modules
-  FormulaConverter = require('../parsers/formulaConverter').FormulaConverter;
+  FormulaConverter = require('../parsers/formula/formulaConverter').FormulaConverter;
 
-let fc = new FormulaConverter({delims: ["\\$\\$", "<math>"], output: "mml"});;
+let fc = new FormulaConverter({delims: ["\\$\\$", "<math>"], output: "mml"});
 
 const formula0 = {
   latex: "\\frac{x^2+x}{y^3}",
@@ -20,6 +20,10 @@ const formula1 = {
   mml: '<math xmlns="http://www.w3.org/1998/Math/MathML" display="block" alttext="x">  <mi>x</mi></math>'
 };
 
+const formula2 = {  // empty formula
+  latex: "",
+  mml: "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\" />"
+};
 
 describe('_getMatchedRegExpGroup', () => {
   it('returns the first group match, but not the full match at index 0', () => {
@@ -50,11 +54,9 @@ describe('parse', function () {
 
       expect(parsedFormulas).to.have.lengthOf(2);
 
-      expect(parsedFormulas[0]).to.have.property('formula').that.equals(
-        "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\" />");
+      expect(parsedFormulas[0]).to.have.property('formula').that.equals(formula2.mml);
       expect(parsedFormulas[0]).to.have.property('startIndex', 0);
-      expect(parsedFormulas[1]).to.have.property('formula').that.equals(
-        "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\" />");
+      expect(parsedFormulas[1]).to.have.property('formula').that.equals(formula2.mml);
       expect(parsedFormulas[1]).to.have.property('endIndex', input.split('>', 2).join('>').length + 1);
 
       done();
@@ -91,3 +93,31 @@ describe('parse', function () {
 });
 
 
+describe('convert', function () {
+  it('converts empty file string to an empty file string', function (done) {
+    fc.convert("", (err, preparedFileStr, report) => {
+      expect(err).to.be.null;
+      expect(preparedFileStr).to.equal("");
+      expect(report).to.contain.all.keys({'converter': 'formula'});
+      done();
+    })
+  });
+
+  it('converts file with some formulas correctly', function (done) {
+    let sourceStr = `Formula 0: \$\$${formula0.latex}\$\$;` +
+      `Formula 1: <math>${formula1.latex}</math>;` +
+      `Formula empty: \$\$\$\$.`;
+
+    let expectedStr = `Formula 0: ${formula0.mml};` +
+      `Formula 1: ${formula1.mml};` +
+      `Formula empty: ${formula2.mml}.`;
+    expectedStr = expectedStr.replace(/(\n|\r)/g, '');
+
+    fc.convert(sourceStr, (err, preparedFileStr, report) => {
+      expect(preparedFileStr.replace(/(\n|\r)/g, '')).to.equal(expectedStr);
+
+      done();
+    });
+  });
+
+});
