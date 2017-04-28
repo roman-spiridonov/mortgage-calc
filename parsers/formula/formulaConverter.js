@@ -295,6 +295,7 @@ if (!module.parent) {
   fc.convert(argv._[0], (err, preparedFileStr, report) => {
     if (err) throw err;
     console.log(preparedFileStr);
+    console.log(report);
   });
 
 } else {

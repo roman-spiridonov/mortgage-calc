@@ -85,7 +85,7 @@ Config.prototype.getType = function (prop) {
 
 /**
  * Get the meta object in a format suitable for usage() function of yargs library.
- * @param {string[]} props - list of properties.
+ * @param {string[]} propStrs - list of properties.
  */
 Config.prototype.getMetaYargsObj = function (propStrs) {
   let res = {};
@@ -101,7 +101,7 @@ Config.prototype.getMetaYargsObj = function (propStrs) {
 };
 
 /**
- * Returns options object by extracting the values of the application supported options from another object.
+ * Returns options object stored in one of the properties of another object.
  * Useful for generating options object when creating command-line apps (with libraries like yargs).
  * @param {Object} obj - object that contains option values, among other options
  * @param {string} rootStr - root where to look for options (e.g. 'formula')
