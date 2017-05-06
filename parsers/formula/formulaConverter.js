@@ -4,7 +4,7 @@ const util = require('util');
 const EventEmitter = require('events').EventEmitter;
 const mjAPI = require("mathjax-node");
 const config = require('./config');
-const helpers = require('../helpers');
+const helpers = require('../../helpers');
 
 
 /**
@@ -26,13 +26,14 @@ const helpers = require('../helpers');
  */
 
 function FormulaConverter(options) {
-  this._delims = options.delims || ["\\$\\$"];  // array e.g. ["$$", "<math>"]
+  this._delims = options.delims || config.formula.delims;  // array e.g. ["$$", "<math>"]
   this._re = this._setUpRegExp();  // /\$\$([^$]+)\$\$/ig  // --> $$(f1)$$ ... $$(f2)$$
-  this._output = options.output || 'mathml';
-  this._linebreaks = options.linebreaks || false;
+  this._output = options.output || config.formula.output;
+  this._linebreaks = options.linebreaks || config.formula.linebreaks;
+  this._mathjax = options.mathjax || config.formula.mathjax;
+
   this._outstandingHandlers = {};  // counter for outstanding async operations on files
   this._parsedFormulasCache = {};  // keeping state between callbacks
-  this._mathjax = options.mathjax || {};
 
   mjAPI.config({
     MathJax: this._mathjax
@@ -275,23 +276,13 @@ if (!module.parent) {
   // <cmd> "$$x^2$$ + $$x$$" --input TeX --output MathML
   let argv = require('yargs')
     .demandCommand(1)
-    .usage("Usage: $0 [options] \"<your formula>\" > file", config.getMetaYargsObj([
-      'formula.input',
-      'formula.output',
-      'formula.delims',
-      'formula.linebreaks']))
+    .usage("Usage: $0 [options] \"<your formula>\" > file", config.getMetaYargsObj('formula'))
     .example("$0 \"x^2\" -i TeX -o svg")
-    .example("cat file1 | $0 -i TeX > file2")
-    .alias('f', 'file').alias('o', 'output').alias('i', 'input')
-    .help('h')
-    .alias('h', 'help')
-    .epilog('copyright 2017')
+    .help('h').alias('h', 'help')
     .argv
   ;
 
-  let options = config.getOptionsObj(argv, "formula");
-
-  let fc = new FormulaConverter(options);
+  let fc = new FormulaConverter(argv);
   fc.convert(argv._[0], (err, preparedFileStr, report) => {
     if (err) throw err;
     console.log(preparedFileStr);

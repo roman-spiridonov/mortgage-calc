@@ -4,7 +4,7 @@ const http = require('http');
 // var url = require('url');
 // var querystring = require('querystring');
 const static = require('node-static');
-const config = require('./parsers/formula/config');
+const config = require('./config');
 
 const file = new static.Server(config.isDevelopment ? 'src/' : 'webapp/', {
   cache: 0
