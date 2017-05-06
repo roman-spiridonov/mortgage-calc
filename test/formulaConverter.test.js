@@ -121,3 +121,29 @@ describe('convert', function () {
   });
 
 });
+
+describe('command line', function () {
+  it('works from the command line', function (done) {
+    const fork = require('child_process').fork;
+    const node = fork('parsers/formula/formulaConverter.js',
+      ['\$\$x^2\$\$ + \$\$x\$\$', '--input', 'TeX', '--output', 'mml'], {
+        stdio: ['ignore', 'pipe', 'pipe', 'ipc']
+      });
+
+    let res = "";
+    let report = "";
+    node.stdout.on('data', (data) => {
+      res += data;
+    });
+    node.stderr.on('data', (data) => {
+      report += data;
+    });
+
+    node.on('close', (code) => {
+      expect(code).to.equal(0);
+      expect(res).to.match(/<math[\s\S]*>\s*<msup>\s*<mi>x<\/mi>\s*<mn>2<\/mn>\s*<\/msup>/);
+      expect(report).to.match(/{[\s\S]*startIndex: 10,\s*endIndex: 15[\s\S]*}/);
+      done();
+    });
+  });
+});

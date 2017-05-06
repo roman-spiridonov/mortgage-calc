@@ -23,7 +23,7 @@ let defaults = {
       mathjax: {},
       delims: {
         desc: "Formula delimeters in an input string",
-        type: "Array"
+        type: "array"
       },
       input: {
         alias: "i",

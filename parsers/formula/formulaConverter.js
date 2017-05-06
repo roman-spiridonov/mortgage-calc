@@ -272,22 +272,46 @@ _p.convert = function (fileStr, cb) {
 };
 
 
-if (!module.parent) {
-  // <cmd> "$$x^2$$ + $$x$$" --input TeX --output MathML
-  let argv = require('yargs')
-    .demandCommand(1)
+function execute(data) {
+  let argv = require('yargs');
+  if (!data) {
+    // require formula string as a first parameter
+    argv = argv.demandCommand(1);
+  }
+
+  argv = argv
     .usage("Usage: $0 [options] \"<your formula>\" > file", config.getMetaYargsObj('formula'))
     .example("$0 \"x^2\" -i TeX -o svg")
+    .example("echo \"x^2\" | $0 -i TeX -o mml 1> result.txt 2> report.json")
     .help('h').alias('h', 'help')
     .argv
   ;
 
   let fc = new FormulaConverter(argv);
-  fc.convert(argv._[0], (err, preparedFileStr, report) => {
+  fc.convert(data || argv._[0], (err, preparedFileStr, report) => {
     if (err) throw err;
     console.log(preparedFileStr);
-    console.log(report);
+    console.error(report);
   });
+}
+
+
+if (!module.parent) {
+  // Support piping
+  let data = "";
+  if(!process.stdin.isTTY) {  // running as <cmd> "\$\$x^2\$\$ + \$\$x\$\$" --input TeX --output mml
+    process.stdin.setEncoding('utf8');
+    process.stdin.on('data', function(chunk) {
+        data += chunk;
+    });
+    process.stdin.on('end', () => {
+      data = data.replace(/\n$/, ''); // replace trailing \n from hitting enter on stdin
+      execute(data);
+    });
+
+  } else {  // running as cat file.html | <cmd> --input TeX --output mml
+    execute(null);
+  }
 
 } else {
   exports.FormulaConverter = FormulaConverter;
