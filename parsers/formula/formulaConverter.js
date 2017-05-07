@@ -221,11 +221,10 @@ _p._getOutputProperty = function () {
   return res;
 };
 
-
 /**
  * Return converted file as a string.
  * @param fileStr {string} - input string
- * @param cb
+ * @param cb {ConverterManager~convertCallback}
  */
 _p.convert = function (fileStr, cb) {
   let report = {
@@ -280,7 +279,7 @@ function execute(data) {
   }
 
   argv = argv
-    .usage("Usage: $0 [options] \"<your formula>\" > file", config.getMetaYargsObj('formula'))
+    .usage("Usage: $0 \"<your formula>\" [options]", config.getMetaYargsObj('formula'))
     .example("$0 \"x^2\" -i TeX -o svg")
     .example("echo \"x^2\" | $0 -i TeX -o mml 1> result.txt 2> report.json")
     .help('h').alias('h', 'help')

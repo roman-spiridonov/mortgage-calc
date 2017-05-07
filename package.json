@@ -7,6 +7,7 @@
     "eslint": "^3.19.0",
     "glob": "^7.1.1",
     "highlight.js": "^9.11.0",
+    "lodash": "^4.17.4",
     "marked": "^0.3.6",
     "node-static": "^0.7.9",
     "pygmentize-bundled": "^2.3.0"

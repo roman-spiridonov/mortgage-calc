@@ -7,7 +7,7 @@ const marked = require('marked');
 const config = require('./config');
 const helpers = require('../../helpers');
 
-function MarkdownConverter(options) {
+function MarkedConverter(options) {
   helpers.mergeDeep(this, config.marked, options);
 
   // Add highlighting function if it is enabled
@@ -34,8 +34,8 @@ function MarkdownConverter(options) {
   }
 }
 
-const _p = MarkdownConverter.prototype;
-_p._name = "markdown";
+const _p = MarkedConverter.prototype;
+_p._name = "marked";
 
 
 /**
@@ -44,15 +44,35 @@ _p._name = "markdown";
  * @param cb
  */
 _p.convert = function (fileStr, cb) {
+  let report = {
+    converter: this._name
+  };
+  report.status = "success";
+
   marked.setOptions(this);
-  marked(fileStr, cb);
+  marked(fileStr, (err, content) => {
+    if (err) {
+      report.status = "fatal";
+      report.message = err.message;
+    }
+
+    return cb(null, content, report);
+  });
 };
 
 
 if (!module.parent) {
-  // <cmd> "#Heading"
+  config.runFromCmd('marked', (err, data, argv) => {
+    let mc = new MarkedConverter(argv);
+    mc.convert(data, (err, preparedFileStr, report) => {
+      if (err) throw err;
+      console.log(preparedFileStr);
+      console.error(report);
+    });
+
+  });
 
 } else {
-  exports.MarkdownConverter = MarkdownConverter;
+  exports.MarkedConverter = MarkedConverter;
 }
 

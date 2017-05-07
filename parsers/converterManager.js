@@ -7,7 +7,8 @@ const
   glob = require('glob'),
   async = require('async'),
   fs = require('fs'),
-  path = require('path');
+  path = require('path'),
+  _ = require('lodash');
 
 const STATUS_TO_NUM = {
   'success': 1,
@@ -82,35 +83,67 @@ _p.runOnFile = function (file, cb) {
  * @private
  */
 _p._parseFile = function (file, cb) {
+  let self = this;
   fs.readFile(file, {encoding: 'utf-8'}, (err, fileStr) => {
     if (err) return cb(err);
-    this._fileMap[file] = {contents: fileStr, dest: this.getDestForFile(file)};
+    this._fileMap[file] = {contents: fileStr, preparedFileStr: fileStr, dest: this.getDestForFile(file)};
     this._resultMap[file] = {};
 
     this._fileMap[file]._outstandingHandlers = this._options.converters.length;
 
+    let convertFuncs = [];
+    let j = 0;
     for (let i = 0; i < this._options.converters.length; i++) {
-      this._options.converters[i].convert(fileStr, (err, preparedFileStr, report) => {
-        if (err) return cb(err);
+      let c = this._options.converters[i];
+      if(j === 0) {
+        convertFuncs[j++] = (cb) => cb(null, self._fileMap[file].preparedFileStr);
+      }
+      convertFuncs[j++] = c.convert.bind(c);
+      convertFuncs[j++] = interimCb;
+    }
+    // running converters in order, saving interim results to cache
+    async.waterfall(convertFuncs, finalCb);
 
-        this._fileMap[file].preparedFileStr = preparedFileStr;
+    function interimCb(preparedFileStr, report, cb) {
+      /**
+       * @callback ConverterManager~convertCallback
+       * @param err {null|Error}
+       * @param preparedFileStr {string} - resulting string
+       * @param report {ReportObject} - JSON with the report that has the following structure
+       */
+      /**
+       * @name ReportObject
+       * @type object
+       * @property converter {string} - name of the converter
+       * @property status {string} - "success", "warning", "error", or "fatal"
+       * @property message {string} - error message (if status is "warning" or lower)
+       */
+      self._fileMap[file].preparedFileStr = preparedFileStr;
 
-        // Store parsing report
-        let resForFile = this._resultMap[file];
-        if (!resForFile.report) {
-          resForFile.report = [report];
-        } else {
-          resForFile.report.push(report);
-        }
+      // Store parsing report
+      let resForFile = self._resultMap[file];
+      if (!resForFile.report) {
+        resForFile.report = [report];
+      } else {
+        resForFile.report.push(report);
+      }
+      self._fileMap[file]._outstandingHandlers--;
 
-        this._fileMap[file]._outstandingHandlers--;
-        if (this._fileMap[file]._outstandingHandlers === 0) {
-          let statuses = this._extractStatusFromResults(resForFile);
-          resForFile.status = this._calculateStatus(statuses);
+      cb(null, self._fileMap[file].preparedFileStr);
+    }
 
-          cb(null, this._resultMap);
-        }
-      });
+    function finalCb(err, preparedFileStr, report) {
+      if(err) {
+        interimCb(preparedFileStr, report, ()=>{});
+      }
+
+      let resForFile = self._resultMap[file];
+      if (self._fileMap[file]._outstandingHandlers === 0) {
+        let statuses = self._extractStatusFromResults(resForFile);
+        resForFile.status = self._calculateStatus(statuses);
+
+        return cb(null, self._resultMap);
+      }
     }
   });
 };

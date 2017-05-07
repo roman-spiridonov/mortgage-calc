@@ -12,10 +12,11 @@ const
 
   // Project modules
   cm = require('../parsers/converterManager'),
-  formulaConv = require('../parsers/formula');
+  formulaConv = require('../parsers/formula'),
+  markedConv = require('../parsers/marked');
 
 describe("user stories", function () {
-  let testGlobPrefix = path.join(__dirname, "data");
+  let testGlobPrefix = path.join(__dirname, "fixtures", "data");
   function globFor(str) {
     return path.join(testGlobPrefix, "/", str);
   }
@@ -27,6 +28,7 @@ describe("user stories", function () {
 
     // Register the converters
     cm.use(formulaConv);
+    cm.use(markedConv);
 
     // Set up and instantiate the converters
     cm.setUp({
@@ -36,35 +38,47 @@ describe("user stories", function () {
           scope: '',
           settings: require('./fixtures/config-formula-default')
         },
-        // {
-        //   name: 'markdown',
-        //   scope: '',
-        //   settings: {}
-        // },
+        {
+          name: 'marked',
+          scope: '',
+          settings: require('./fixtures/config-marked-default')
+        }
       ],
 
-      src: path.join(__dirname, 'data'), // source folder
-      dest: path.join(__dirname, 'out')  // destination folder
+      src: testGlobPrefix, // source folder
+      dest: path.join(__dirname, 'fixtures', 'out')  // destination folder
     });
 
     cm.run(testGlobAll, (err, res) => {
-      expect(err).to.be.null;
-      expect(res).to.have.property(path.join(testGlobPrefix, 'test.html'))
-        .that.is.an('object')
-        .that.contains.all.keys(['status', 'report', 'dest'])
-        .with.property('report')
-          .that.is.an.instanceof(Array)
-          .with.deep.property('[0]')
-            .that.contains.all.keys({converter: 'formula'});
+      let sourceFile1 = path.join(testGlobPrefix, 'test.html');
+      let sourceFile2 = path.join(testGlobPrefix, 'test.md');
 
-      expect(res).to.have.all.keys(path.join(testGlobPrefix, 'test.html'), path.join(testGlobPrefix, 'test.md'));
+      expect(err).to.be.null;
+      // check structure
       // res = {
       //  'path\\to\\test.md': {
       //    status: "warnings",
-      //    report: [{converter: "markdown", status: "warnings", errors: []}, ...],
+      //    report: [{converter: "marked", status: "warnings", message: ""}, {converter: "formula", parsedFormulas: [], ...}, ...],
       //    dest: 'test.html'
       //    }, ...
       // }
+      expect(res).to.have.property(sourceFile1)
+        .that.is.an('object')
+        .that.have.all.keys(['status', 'report', 'dest'])
+        .with.property('report')
+          .that.is.an.instanceof(Array)
+          .that.has.lengthOf(2)
+          .with.deep.property('[0]').that.contains({converter: 'formula', status: 'success'});
+      expect(res[sourceFile1].report[1]).to.eql({converter: 'marked', status: 'success'});
+      expect(res).to.have.all.keys(sourceFile1, sourceFile2);
+
+      // check contents from cache
+      expect(cm._fileMap[sourceFile1].preparedFileStr).to.match(
+        /<h1[\s\S]*>\s*Heading\s*<\/h1>\s*<p>This is some custom math.<\/p>\s*<math[\s\S]*>\s*<msup>\s*<mi>x<\/mi>\s*<mn>2<\/mn>\s*<\/msup>/
+      );
+      expect(cm._fileMap[sourceFile2].preparedFileStr).to.match(
+        /<h2[\s\S]*>\s*Section\s*<\/h2>\s*<p>No math in this document!<\/p>/
+      );
 
       done();
     });

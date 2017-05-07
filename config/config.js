@@ -57,8 +57,8 @@ _p.getMetaYargsObj = function (propStr) {
  * @param {string} propStr - Reference to a property as a "." delimited string
  * @param {Object} target - Object to look at
  */
-_p._getPropRef = function(propStr, target = this) {
-  if(propStr === null || propStr === '') {
+_p._getPropRef = function (propStr, target = this) {
+  if (propStr === null || propStr === '') {
     return target;
   }
 
@@ -76,5 +76,56 @@ _p._getPropRef = function(propStr, target = this) {
   return res;
 };
 
+/**
+ * @callback Config~executeCallback
+ * @param {Error|null} err - returns error as a first argument in case it occurred, null if everything was ok.
+ * @param {string} data - input data for a script
+ * @param {object} argv - yargs object (add app-specific instructions)
+ */
+
+/**
+ * Starts command-line application with yargs, supporting piped inputs.
+ * @param propStr {string} - where to look for settings (e.g. inside 'formula' property)
+ * @param cb {Config~executeCallback} - calls when done
+ */
+_p.runFromCmd = function (propStr, cb) {
+  let self = this;
+
+  // Support piping
+  let data = "";
+  if (!process.stdin.isTTY) {  // running as <cmd> "#Heading"
+    process.stdin.setEncoding('utf8');
+    process.stdin.on('data', function (chunk) {
+      data += chunk;
+    });
+    process.stdin.on('end', () => {
+      data = data.replace(/\n$/, ''); // replace trailing \n from hitting enter on stdin
+      return execute(data);
+    });
+
+  } else {  // running as cat file.html | <cmd>
+    return execute(null);
+  }
+
+
+  function execute(data) {
+    let argv = require('yargs');
+    if (!data) {
+      // require formula string as a first parameter
+      argv = argv.demandCommand(1);
+    }
+
+    argv = argv
+      .usage("Usage: $0 \"<your input>\" [options]", self.getMetaYargsObj(propStr))
+      .example("$0 \"your input\" [options]")
+      .example("echo \"your input\" | $0 [options]")
+      .help('h').alias('h', 'help')
+      .argv
+    ;
+
+    cb(null, data || argv._[0], argv);
+  }
+
+};
 
 exports.Config = Config;
