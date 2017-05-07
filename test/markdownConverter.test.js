@@ -12,8 +12,8 @@ describe("MarkdownConverter", function () {
   describe("convert", function () {
 
     it("saves marked settings to the converter instance", function() {
-      let mc = new MarkdownConverter({codeHighlight: true, smartLists: true, sanitize: false, gfm: true, tables: true});
-      expect(mc).to.have.all.keys('codeHighlight', 'smartLists', 'sanitize', 'gfm', 'tables', 'highlight');
+      let mc = new MarkdownConverter({codeHighlight: {enabled: true}, smartLists: true, sanitize: false, gfm: true, tables: true});
+      expect(mc).to.contain.all.keys('smartLists', 'sanitize', 'gfm', 'tables', 'highlight');
       expect(typeof(mc.highlight)).to.equal('function');
       expect(mc.gfm).to.be.true;
     });

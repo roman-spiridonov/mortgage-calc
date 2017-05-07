@@ -56,7 +56,6 @@ describe("converterManager", function () {
   after(function () {
     fs.readFile.restore();
     fs.writeFile.restore();
-    delete global.glob;
   });
 
   describe("setUp", function () {

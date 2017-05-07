@@ -4,15 +4,32 @@
 "use strict";
 
 const marked = require('marked');
-const pygmetize = require('pygmentize-bundled');
+const config = require('./config');
+const helpers = require('../../helpers');
 
 function MarkdownConverter(options) {
-  Object.assign(this, options);
-  if (this.codeHighlight) {
-    this.highlight = function (code, lang, callback) {
-      pygmetize({lang: lang, format: 'html'}, code, function (err, result) {
-        callback(err, result.toString());
-      });
+  helpers.mergeDeep(this, config.marked, options);
+
+  // Add highlighting function if it is enabled
+  if (this.codeHighlight.enabled) {
+    switch (this.codeHighlight.library) {
+      case 'pygmentize-bundled':
+        this.highlight = function (code, lang, callback) {
+          require('pygmentize-bundled')({lang: lang, format: 'html'}, code, function (err, result) {
+            callback(err, result.toString());
+          });
+        };
+        break;
+
+      case 'highlight.js':
+        this.highlight = function (code) {
+          return require('highlight.js').highlightAuto(code).value;
+        };
+        break;
+
+      default:
+        // TODO: add logger and report error message
+        this.enabled = false;
     }
   }
 }

@@ -40,10 +40,10 @@ _p.isObject = function (item) {
 };
 
 /**
- * Immutable merge of nested objects.
+ * Mutable merge of nested objects.
  * See http://stackoverflow.com/a/37164538.
  * @param target {object}
- * @param source {object}
+ * @param sources - comma-separated objects
  * @returns {*}
  */
 _p.mergeDeep = function (target, ...sources) {
