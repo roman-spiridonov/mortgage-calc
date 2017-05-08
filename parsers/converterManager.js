@@ -241,7 +241,8 @@ _p.getDestForFile = function (file) {
 
 /**
  * Register converter.
- * @param Converter {constructor}
+ * @param Converter {Converter}
+ * @param name {string} - specify to change the default name of the converter
  */
 _p.use = function (Converter, name) {
   if (name === undefined) {
@@ -251,5 +252,6 @@ _p.use = function (Converter, name) {
   // Add constructor to the map
   this._converters[name] = Converter;
 };
+
 
 module.exports = new ConverterManager();

@@ -8,13 +8,23 @@ const config = require('./config');
 const helpers = require('../../helpers');
 
 function MarkedConverter(options) {
-  helpers.mergeDeep(this, config.marked, options);
+  this._options = {};
+  Object.assign(this._options, config.marked);
+  this.init(options);
+}
+
+const _p = MarkedConverter.prototype;
+_p._name = "marked";
+
+
+_p.init = function (options) {
+  helpers.mergeDeep(this._options, options);
 
   // Add highlighting function if it is enabled
-  if (this.codeHighlight.enabled) {
-    switch (this.codeHighlight.library) {
+  if (this._options.codeHighlight.enabled) {
+    switch (this._options.codeHighlight.library) {
       case 'pygmentize-bundled':
-        this.highlight = function (code, lang, callback) {
+        this._options.highlight = function (code, lang, callback) {
           require('pygmentize-bundled')({lang: lang, format: 'html'}, code, function (err, result) {
             callback(err, result.toString());
           });
@@ -22,21 +32,17 @@ function MarkedConverter(options) {
         break;
 
       case 'highlight.js':
-        this.highlight = function (code) {
+        this._options.highlight = function (code) {
           return require('highlight.js').highlightAuto(code).value;
         };
         break;
 
       default:
         // TODO: add logger and report error message
-        this.enabled = false;
+        this._options.codeHighlight = false;
     }
   }
-}
-
-const _p = MarkedConverter.prototype;
-_p._name = "marked";
-
+};
 
 /**
  * Return converted file as a string.
@@ -49,7 +55,7 @@ _p.convert = function (fileStr, cb) {
   };
   report.status = "success";
 
-  marked.setOptions(this);
+  marked.setOptions(this._options);
   marked(fileStr, (err, content) => {
     if (err) {
       report.status = "fatal";

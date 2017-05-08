@@ -13,9 +13,9 @@ describe("MarkedConverter", function () {
 
     it("saves marked settings to the converter instance", function() {
       let mc = new MarkedConverter({codeHighlight: {enabled: true}, smartLists: true, sanitize: false, gfm: true, tables: true});
-      expect(mc).to.contain.all.keys('smartLists', 'sanitize', 'gfm', 'tables', 'highlight');
-      expect(typeof(mc.highlight)).to.equal('function');
-      expect(mc.gfm).to.be.true;
+      expect(mc._options).to.contain.all.keys('smartLists', 'sanitize', 'gfm', 'tables', 'highlight');
+      expect(typeof(mc._options.highlight)).to.equal('function');
+      expect(mc._options.gfm).to.be.true;
     });
 
     it("converts empty markdown string to empty html", function (done) {

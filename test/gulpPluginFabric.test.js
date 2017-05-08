@@ -10,9 +10,11 @@ const
   gulp = require('gulp'),
   path = require('path'),
   fs = require('fs'),
+  async = require('async'),
 
-  // Project modules
-  formula = require('../parsers/formula/gulpFormula');
+// Project modules
+  formula = require('../parsers/formula/gulp-formula'),
+  marked = require('../parsers/marked/gulp-marked');
 
 const DIRS = {
   data: path.join(__dirname, 'fixtures', 'data'),
@@ -23,7 +25,7 @@ const DIRS = {
 function removeDir(dir) {
   if (fs.existsSync(dir)) {
     let files = fs.readdirSync(dir);
-    for (let i in files) {
+    for (let i in Object.keys(files)) {
       fs.unlinkSync(path.join(dir, files[i]));
     }
     fs.rmdirSync(dir);
@@ -38,9 +40,17 @@ function checkFileStrEql(fileStr1, fileStr2) {
   return ( dos2nix(fileStr1) === dos2nix(fileStr2) );
 }
 
-function doGulpTest(fileName, gulpSrcOptions, options, cb) {
-  gulp.src(path.join(DIRS.data, fileName), gulpSrcOptions)
-    .pipe(formula(options))
+function doGulpTest(fileName, gulpSrcOptions, gulpPlugins, cb) {
+  let gulpStream = gulp.src(path.join(DIRS.data, fileName), gulpSrcOptions);
+  if (!gulpPlugins.length) throw new Error(`You should pass an array of gulpPlugins [ {plugin: <...>, options: {...} } ] as third parameter`);
+
+  for (let i in Object.keys(gulpPlugins)) {
+    let plugin = gulpPlugins[i].plugin;
+    let options = gulpPlugins[i].options;
+    gulpStream = gulpStream.pipe(plugin(options));
+  }
+
+  return gulpStream
     .pipe(gulp.dest(DIRS.out))
     .on('end', function () {
       let fileStrActual, fileStrExpected;
@@ -57,17 +67,25 @@ function doGulpTest(fileName, gulpSrcOptions, options, cb) {
 }
 
 
-describe("gulp-formula", function () {
+describe("gulpPluginFabric", function () {
   beforeEach(function () {
     removeDir(DIRS.out);
   });
 
   it("Works by default in gulp", function (done) {
-    doGulpTest('formulas.html', {}, {}, done);
+    async.parallel([
+      (cb) => doGulpTest('formulas.html', {}, [{plugin: formula}], cb),
+      (cb) => doGulpTest('test.html', {}, [{plugin: formula}, {plugin: marked}], cb),
+      (cb) => doGulpTest('test.md', {}, [{plugin: marked}, {plugin: formula}], cb)
+    ], done);
   });
 
   it("Works for stream of objects in gulp {buffer: false}", function (done) {
-    doGulpTest('formulas.html', {buffer: false}, {}, done);
+    async.parallel([
+      (cb) => doGulpTest('formulas.html', {buffer: false}, [{plugin: formula}], cb),
+      (cb) => doGulpTest('test.html', {buffer: false}, [{plugin: formula}, {plugin: marked}], cb),
+      (cb) => doGulpTest('test.md', {buffer: false}, [{plugin: marked}, {plugin: formula}], cb)
+    ], done);
   });
 
   it("Throws an error for {read: false}", function (done) {
@@ -78,6 +96,6 @@ describe("gulp-formula", function () {
         expect(err.message).to.match(/gulp-formula/i);
         done();
       });
-});
+  });
 
 });

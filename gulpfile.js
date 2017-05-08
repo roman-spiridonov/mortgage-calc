@@ -14,8 +14,9 @@ const
   babel = require('gulp-babel'),
   htmlReplace = require('gulp-html-replace'),
   // Project files
-  config = require('./parsers/formula/config'),
-  formula = require('./parsers/formula/gulpFormula');
+  config = require('./config').config,
+  formula = require('./parsers/formula/gulp-formula'),
+  marked = require('./parsers/marked/gulp-marked');
 
 const isDevelopment = config.isDevelopment;
 const src = config.src;
@@ -43,6 +44,7 @@ if(isDevelopment) {
   gulp.task('html', function () {  // TODO: 1) insert templates/, 2) change script refs to minimized file
     return gulp.src(path.join(src, '**/*.html'), {buffer: false})
       .pipe(htmlReplace({'main': 'script.min.js', 'sub': ''}))
+      .pipe(marked())
       .pipe(formula())
       .pipe(gulp.dest(dest)).pipe(debug());
   });
