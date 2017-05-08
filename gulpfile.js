@@ -14,13 +14,13 @@ const
   babel = require('gulp-babel'),
   htmlReplace = require('gulp-html-replace'),
   // Project files
-  config = require('./config').config,
+  nconf = require('./config').nconf,
   formula = require('./parsers/formula/gulp-formula'),
   marked = require('./parsers/marked/gulp-marked');
 
-const isDevelopment = config.isDevelopment;
-const src = config.src;
-const dest = config.dest;
+const isDevelopment = nconf.get('isDevelopment');
+const src = nconf.get('src');
+const dest = nconf.get('dest');
 
 if (!isDevelopment) {
   console.log('Gulp: executing a production build!');

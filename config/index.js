@@ -3,7 +3,21 @@
  */
 "use strict";
 
-const Config = require('./config').Config;
-let appConfig = require('./app');
+const
+  nconf = require('nconf'),
+  path = require('path'),
 
-exports.config = new Config(appConfig.config, appConfig.defaults);
+  Config = require('./config').Config,
+  appConfig = require('./app'),
+  userConfig = require('../.user-config');
+
+exports.config = new Config(appConfig.config, appConfig.defaults);  // default config
+
+// Actual (nconf) config
+nconf
+  .env()
+  .argv()
+  .use('literal', userConfig)
+  .defaults(exports.config);
+
+exports.nconf = nconf;

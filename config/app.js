@@ -14,7 +14,7 @@ let defaults = {
   port: 8080,
   isDevelopment: false,
   mainScriptBlockLabel: "main",
-  subordinateScriptBlockLabel: "sub",
+  subordinateScriptBlockLabel: "sub"
 };
 
 

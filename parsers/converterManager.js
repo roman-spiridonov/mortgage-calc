@@ -7,7 +7,10 @@ const
   glob = require('glob'),
   async = require('async'),
   fs = require('fs'),
-  path = require('path');
+  path = require('path'),
+
+  nconf = require('../config').nconf,
+  helpers = require('../helpers');
 
 const STATUS_TO_NUM = {
   'success': 1,
@@ -137,12 +140,13 @@ _p._parseFile = function (file, cb) {
       }
 
       let resForFile = self._resultMap[file];
-      if (self._fileMap[file]._outstandingHandlers === 0) {
-        let statuses = self._extractStatusFromResults(resForFile);
-        resForFile.status = self._calculateStatus(statuses);
-
-        return cb(null, self._resultMap);
+      if (self._fileMap[file]._outstandingHandlers !== 0) {
+        console.error(`Expected outstandingHandlers counter to be 0, but got ${self._fileMap[file]._outstandingHandlers}.`)
       }
+      let statuses = self._extractStatusFromResults(resForFile);
+      resForFile.status = self._calculateStatus(statuses);
+
+      return cb(null, self._resultMap);
     }
   });
 };
@@ -224,7 +228,8 @@ _p.setUp = function (setUpObject) {
     }
     // instantiates it with the passed settings
     const C = this._converters[conv.name];
-    let c = new C(conv.settings);
+    let settings = helpers.mergeDeep(nconf.get(C.prototype._name), conv.settings);  // nconf contains default settings
+    let c = new C(settings);
 
     // add the instance (in order) to the list of active converters
     this._options.converters.push(c);
