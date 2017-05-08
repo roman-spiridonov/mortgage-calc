@@ -1,19 +1,21 @@
 "use strict";
 
-const gulp = require('gulp');
-const sourcemaps = require('gulp-sourcemaps');
-const debug = require('gulp-debug');
-const gulpIf = require('gulp-if');
-const del = require('del');
-const jshint = require('gulp-jshint');
-const path = require('path');
-const cp = require('child_process');
-const concat = require('gulp-concat');
-const uglify = require('gulp-uglify');
-const babel = require('gulp-babel');
-const htmlReplace = require('gulp-html-replace');
-
-const config = require('./parsers/formula/config');
+const
+  // Libraries
+  gulp = require('gulp'),
+  sourcemaps = require('gulp-sourcemaps'),
+  debug = require('gulp-debug'),
+  gulpIf = require('gulp-if'),
+  del = require('del'),
+  path = require('path'),
+  cp = require('child_process'),
+  concat = require('gulp-concat'),
+  uglify = require('gulp-uglify'),
+  babel = require('gulp-babel'),
+  htmlReplace = require('gulp-html-replace'),
+  // Project files
+  config = require('./parsers/formula/config'),
+  formula = require('./parsers/formula/gulpFormula');
 
 const isDevelopment = config.isDevelopment;
 const src = config.src;
@@ -41,6 +43,7 @@ if(isDevelopment) {
   gulp.task('html', function () {  // TODO: 1) insert templates/, 2) change script refs to minimized file
     return gulp.src(path.join(src, '**/*.html'), {buffer: false})
       .pipe(htmlReplace({'main': 'script.min.js', 'sub': ''}))
+      .pipe(formula())
       .pipe(gulp.dest(dest)).pipe(debug());
   });
   
@@ -68,7 +71,6 @@ gulp.task('build', gulp.series(
   gulp.parallel('html', 'js', 'static')
 ));
 
-
 if (isDevelopment) {
   gulp.task('watch:static', function () {
     return gulp.watch(path.join(src, '*.{css,png,json}'), gulp.series('static'));  // webpack
@@ -83,10 +85,3 @@ if (isDevelopment) {
 } else {  // isDevelopment == false
   gulp.task('default', gulp.series('build'));
 }
-
-gulp.task('jshint', function () {
-  return gulp.src(path.join(src, '*.js'))
-    .pipe(jshint())
-    .pipe(jshint.reporter('jshint-stylish'));
-  // .pipe(jshint.reporter('fail'));
-});

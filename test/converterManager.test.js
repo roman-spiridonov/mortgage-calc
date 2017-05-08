@@ -51,6 +51,7 @@ describe("converterManager", function () {
       src: 'data', // source folder
       dest: 'out'  // destination folder
     });
+
   });
 
   after(function () {
