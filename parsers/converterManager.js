@@ -7,8 +7,7 @@ const
   glob = require('glob'),
   async = require('async'),
   fs = require('fs'),
-  path = require('path'),
-  _ = require('lodash');
+  path = require('path');
 
 const STATUS_TO_NUM = {
   'success': 1,
@@ -218,7 +217,6 @@ _p.clearCache = function (files) {
   }
 };
 
-// TODO: refactor (too slow)
 _p.setUp = function (setUpObject) {
   setUpObject.converters.forEach((conv) => {
     if (!this._converters.hasOwnProperty(conv.name)) {

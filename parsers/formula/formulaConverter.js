@@ -26,31 +26,37 @@ const helpers = require('../../helpers');
  */
 
 function FormulaConverter(options) {
-  this._delims = options.delims || config.formula.delims;  // array e.g. ["$$", "<math>"]
-  this._re = this._setUpRegExp();  // /\$\$([^$]+)\$\$/ig  // --> $$(f1)$$ ... $$(f2)$$
-  this._output = options.output || config.formula.output;
-  this._linebreaks = options.linebreaks || config.formula.linebreaks;
-  this._mathjax = options.mathjax || config.formula.mathjax;
+  this._options = {};
+  Object.assign(this._options, config.formula);
+  this.init(options);
 
   this._outstandingHandlers = {};  // counter for outstanding async operations on files
   this._parsedFormulasCache = {};  // keeping state between callbacks
-
-  mjAPI.config({
-    MathJax: this._mathjax
-  });
-
   this._started = false;
 }
 
 const _p = FormulaConverter.prototype;
 util.inherits(FormulaConverter, EventEmitter);
 _p.constructor = FormulaConverter;
-
 _p._name = 'formula';
+
+/**
+ * (Re-)Initialize converter with the new options.
+ * @param options {object} - mathjax-node options object
+ */
+_p.init = function(options) {
+  helpers.mergeDeep(this._options, options);
+
+  this._re = this._setUpRegExp();  // /\$\$([^$]+)\$\$/ig  // --> $$(f1)$$ ... $$(f2)$$
+
+  mjAPI.config({
+    MathJax: this._options.mathjax
+  });
+};
 
 _p._setUpRegExp = function () {
   let regexp = new RegExp();
-  this._delims.forEach((delim, index) => {
+  this._options.delims.forEach((delim, index) => {
     let closingChar = delim.charAt(delim.search(/[^\\]/));
     let closingChars = closingChar === '<' ? '</' + delim.slice(1) : delim;
 
@@ -104,7 +110,7 @@ _p.parse = function (fileStr, cb) {
     let typesetParameter = {
       math: this._getMatchedRegExpGroup(formula),
       format: "TeX", // "inline-TeX", "MathML"
-      linebreaks: this._linebreaks,
+      linebreaks: this._options.linebreaks,
       state: {  // state can be accessed from callback
         sourceFormula: formula[0],
         startIndex: formula.index,     // start of $$ block to replace
@@ -170,7 +176,7 @@ _p._collectMath = function (mjData, options) {
 
   let prop = this._getOutputProperty();
   let parsedFormula = {
-    output: this._output,
+    output: this._options.output,
     sourceFormula: options.state.sourceFormula,
     formula: mjData[prop],
     startIndex: options.state.startIndex,
@@ -203,7 +209,7 @@ _p._collectMath = function (mjData, options) {
 // TODO: handle more configs (png, plain text)
 _p._getOutputProperty = function () {
   let res;
-  switch (this._output) {
+  switch (this._options.output) {
     case 'mml':
     case 'mathml':
       res = 'mml';
@@ -215,7 +221,7 @@ _p._getOutputProperty = function () {
       res = 'html';
       break;
     default:
-      throw new Error(`Unrecognized output parameter '${this._output}'`);
+      throw new Error(`Unrecognized output parameter '${this._options.output}'`);
   }
 
   return res;
@@ -271,47 +277,15 @@ _p.convert = function (fileStr, cb) {
 };
 
 
-function execute(data) {
-  let argv = require('yargs');
-  if (!data) {
-    // require formula string as a first parameter
-    argv = argv.demandCommand(1);
-  }
-
-  argv = argv
-    .usage("Usage: $0 \"<your formula>\" [options]", config.getMetaYargsObj('formula'))
-    .example("$0 \"x^2\" -i TeX -o svg")
-    .example("echo \"x^2\" | $0 -i TeX -o mml 1> result.txt 2> report.json")
-    .help('h').alias('h', 'help')
-    .argv
-  ;
-
-  let fc = new FormulaConverter(argv);
-  fc.convert(data || argv._[0], (err, preparedFileStr, report) => {
-    if (err) throw err;
-    console.log(preparedFileStr);
-    console.error(report);
-  });
-}
-
-
 if (!module.parent) {
-  // Support piping
-  let data = "";
-  if(!process.stdin.isTTY) {  // running as <cmd> "\$\$x^2\$\$ + \$\$x\$\$" --input TeX --output mml
-    process.stdin.setEncoding('utf8');
-    process.stdin.on('data', function(chunk) {
-        data += chunk;
+  config.runFromCmd('formula', (err, data, argv) => {
+    let fc = new FormulaConverter(argv);
+    fc.convert(data, (err, preparedFileStr, report) => {
+      if (err) throw err;
+      console.log(preparedFileStr);
+      console.error(report);
     });
-    process.stdin.on('end', () => {
-      data = data.replace(/\n$/, ''); // replace trailing \n from hitting enter on stdin
-      execute(data);
-    });
-
-  } else {  // running as cat file.html | <cmd> --input TeX --output mml
-    execute(null);
-  }
-
+  });
 } else {
   exports.FormulaConverter = FormulaConverter;
 }

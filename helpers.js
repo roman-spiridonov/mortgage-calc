@@ -55,7 +55,7 @@ _p.mergeDeep = function (target, ...sources) {
       if (this.isObject(source[key])) {
         if (!target[key]) Object.assign(target, {[key]: {}});
         this.mergeDeep(target[key], source[key]);
-      } else {
+      } else if (source[key] !== undefined) {  // do not copy undefined values
         Object.assign(target, {[key]: source[key]});
       }
     }
