@@ -9,6 +9,7 @@ const
   fs = require('fs'),
   path = require('path'),
 
+  config = require('../config').config,
   nconf = require('../config').nconf,
   helpers = require('../helpers');
 
@@ -26,13 +27,18 @@ const NUM_TO_STATUS = {
   4: 'fatal'
 };
 
+const NAME_TO_CONV = {
+  'formula': require('./formula/formulaConverter').FormulaConverter,
+  'marked': require('./marked/markedConverter').MarkedConverter
+};
+
 /**
  * Provides public API. Registers and runs individual converters.
  * @constructor
  */
 function ConverterManager() {
   this._isRunning = false;
-  this._options = {converters: [], src: '', dest: 'out/'};
+  this._options = {converters: [], src: nconf.get('src'), dest: nconf.get('dest'), glob: nconf.get('glob')};
 
   this._converters = {};  // registered converters (converter constructors)
 
@@ -44,23 +50,41 @@ const _p = ConverterManager.prototype;
 
 /**
  * Run all converters on a glob of files.
- * @param globStr
+ * @param files
  * @param cb
  */
-_p.run = function (globStr, cb) {
+_p.run = function (files, cb) {
   if (this._isRunning) {  // prevent concurrent runs on a single instance
     return cb(new Error("Running multiple conversions on a single ConverterManager instance is not allowed."));
+  } else if (!files || files === '') {
+    files = this._options.glob;
   }
 
-  this._isRunning = true;
+  if (Array.isArray(files)) {
+    // passed list of files
+    this._isRunning = true;
 
-  glob(globStr, (err, filenames) => {
-    async.each(filenames, this.runOnFile.bind(this), (err) => {
-      if (err) return cb(err);
-      this._isRunning = false;  // unlock for new runs
-      cb(null, this._resultMap);
+    // create destination directory if not exists
+    helpers.createDir(this._options.dest, (err) => {
+      if(err) return cb(err);
+      // run each file from the collection
+      async.each(files,
+        this.runOnFile.bind(this),
+        (err) => {
+          if (err) return cb(err);
+          this._isRunning = false;  // unlock for new runs
+          cb(null, this._resultMap);
+        }
+      );
     });
-  });
+
+  } else {
+    // passed a glob
+    glob(files, (err, filenames) => {
+      if (err) return cb(err);
+      this.run(filenames, cb);
+    });
+  }
 
 };
 
@@ -97,7 +121,7 @@ _p._parseFile = function (file, cb) {
     let j = 0;
     for (let i = 0; i < this._options.converters.length; i++) {
       let c = this._options.converters[i];
-      if(j === 0) {
+      if (j === 0) {
         convertFuncs[j++] = (cb) => cb(null, self._fileMap[file].preparedFileStr);
       }
       convertFuncs[j++] = c.convert.bind(c);
@@ -135,8 +159,9 @@ _p._parseFile = function (file, cb) {
     }
 
     function finalCb(err, preparedFileStr, report) {
-      if(err) {
-        interimCb(preparedFileStr, report, ()=>{});
+      if (err) {
+        interimCb(preparedFileStr, report, () => {
+        });
       }
 
       let resForFile = self._resultMap[file];
@@ -224,7 +249,13 @@ _p.clearCache = function (files) {
 _p.setUp = function (setUpObject) {
   setUpObject.converters.forEach((conv) => {
     if (!this._converters.hasOwnProperty(conv.name)) {
-      throw new Error(`Converter ${conv.name} was not registered with prior call to use() function.`);
+      if (!NAME_TO_CONV[conv.name]) {
+        // unknown converter
+        throw new Error(`Converter ${conv.name} was not registered with prior call to use() function.`);
+      } else {
+        // standard converter name, register it
+        this.use(NAME_TO_CONV[conv.name]);
+      }
     }
     // instantiates it with the passed settings
     const C = this._converters[conv.name];
@@ -235,11 +266,12 @@ _p.setUp = function (setUpObject) {
     this._options.converters.push(c);
   });
 
-  this._options.dest = setUpObject.dest;
-  this._options.src = setUpObject.src;
+  setUpObject.dest && (this._options.dest = setUpObject.dest);
+  setUpObject.src && (this._options.src = setUpObject.src);
 };
 
 _p.getDestForFile = function (file) {
+  // TODO: keep src directory structure
   if (!this._options.dest) throw new Error("Destination folder was not specified");
   return path.join(this._options.dest, path.basename(file));
 };
@@ -247,7 +279,7 @@ _p.getDestForFile = function (file) {
 /**
  * Register converter.
  * @param Converter {Converter}
- * @param name {string} - specify to change the default name of the converter
+ * @param [name] {string} - specify to change the default name of the converter
  */
 _p.use = function (Converter, name) {
   if (name === undefined) {
@@ -258,5 +290,48 @@ _p.use = function (Converter, name) {
   this._converters[name] = Converter;
 };
 
+if (!module.parent) {
+  let cm = new ConverterManager();
 
-module.exports = new ConverterManager();
+  let argv = require('yargs')
+    .usage("Usage: $0 glob [--converters c1 c2 ...] [other options]", config.getMetaYargsObj(''))
+    .example("$0 src/*.html --converters formula marked --formula:output svg")
+    .help('h').alias('h', 'help')
+    .argv
+  ;
+
+  // parse converters list and their settings
+  let converters = [];
+  argv.converters.forEach && argv.converters.forEach((convName) => {
+    converters.push({
+      name: convName,
+      settings: argv[convName]
+    });
+  });
+  argv.converters = converters;
+
+  // prepare converter manager setup object
+  let setUpObject = {};
+  helpers.mergeDeep(setUpObject, argv);
+  cm.setUp(setUpObject);
+
+  // everything is prepared, run
+  let files;
+  if(argv._.length === 1) {
+    if(argv._[0].match(/\*/)) {
+      // glob
+      files = argv._[0];
+    } else {
+      files = argv._;
+    }
+  }
+  cm.run(files, (err, report) => {
+    if (err) throw err;
+    console.log(report);
+  });
+
+} else {
+  module.exports = new ConverterManager();
+}
+
+

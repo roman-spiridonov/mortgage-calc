@@ -7,41 +7,28 @@ const
   // Libraries
   path = require('path'),
   expect = require('chai').expect,
-  fs = require('fs'),
   sinon = require('sinon'),
 
   // Project modules
   cm = require('../parsers/converterManager'),
   formulaConv = require('../parsers/formula'),
-  markedConv = require('../parsers/marked');
+  markedConv = require('../parsers/marked'),
+  fixtures = require('./fixtures'),
+  DIRS = fixtures.DIRS;
 
-const DIRS = {
-  data: path.join(__dirname, 'fixtures', 'data'),
-  out: path.join(__dirname, 'fixtures', 'out'),
-  expected: path.join(__dirname, 'fixtures', 'expected'),
-};
-
-function getFixture(file, version) {
-  return fs.readFileSync(path.join(DIRS[version], file), {encoding: 'utf-8'});
+function globFor(str) {
+  return path.join(DIRS.data, "/", str);
 }
 
-
 describe("user stories", function () {
-  let testGlobPrefix = DIRS.data;
-  function globFor(str) {
-    return path.join(testGlobPrefix, "/", str);
-  }
-  let testGlob = globFor("**/test.*");
-
-  before(function () {
-    if (!fs.existsSync(DIRS.out)) {
-      fs.mkdirSync(DIRS.out);
-    }
+  beforeEach(function () {
+    fixtures.removeDir(DIRS.out);
   });
 
   it("I want to convert a glob of documents of special syntax (e.g. markdown + latex) to a specified destination. " +
     "To do that, I choose a set of converters to run and pass their parameters." +
     "At destination folder, the system keeps the directory structure of a glob.", function (done) {
+    let testGlob = globFor("**/test.*");
 
     // Register the converters
     cm.use(formulaConv);
@@ -62,13 +49,13 @@ describe("user stories", function () {
         }
       ],
 
-      src: testGlobPrefix, // source folder
+      src: DIRS.data, // source folder
       dest: path.join(__dirname, 'fixtures', 'out')  // destination folder
     });
 
     cm.run(testGlob, (err, res) => {
-      let sourceFile1 = path.join(testGlobPrefix, 'test.html');
-      let sourceFile2 = path.join(testGlobPrefix, 'test.md');
+      let sourceFile1 = path.join(DIRS.data, 'test.html');
+      let sourceFile2 = path.join(DIRS.data, 'test.md');
 
       expect(err).to.be.null;
       // check structure
@@ -83,27 +70,44 @@ describe("user stories", function () {
         .that.is.an('object')
         .that.have.all.keys(['status', 'report', 'dest'])
         .with.property('report')
-          .that.is.an.instanceof(Array)
-          .that.has.lengthOf(2)
-          .with.deep.property('[0]').that.contains({converter: 'formula', status: 'success'});
+        .that.is.an.instanceof(Array)
+        .that.has.lengthOf(2)
+        .with.deep.property('[0]').that.contains({converter: 'formula', status: 'success'});
       expect(res[sourceFile1].report[1]).to.eql({converter: 'marked', status: 'success'});
       expect(res).to.have.all.keys(sourceFile1, sourceFile2);
 
       // read resulting files from disk and check
-      expect(getFixture('test.html', 'out')).to.match(
+      expect(fixtures.getFixture('test.html', 'out')).to.match(
         /<h1[\s\S]*>\s*Heading\s*<\/h1>\s*<p>This is some custom math.<\/p>\s*<math[\s\S]*>\s*<msup>\s*<mi>x<\/mi>\s*<mn>2<\/mn>\s*<\/msup>/
       );
-      expect(getFixture('test.md', 'out')).to.match(
+      expect(fixtures.getFixture('test.md', 'out')).to.match(
         /<h2[\s\S]*>\s*Section\s*<\/h2>\s*<p>No math in this document!<\/p>/
       );
 
       done();
     });
-
-
   });
 
-  it("The above scenario works via cmd line launch");
+  it("The above scenario works via cmd line launch", function (done) {
+    const testGlob = globFor('*.*');
+    const fork = require('child_process').fork;
+    const node = fork('parsers/converterManager.js',
+      [testGlob, '--converters', 'marked', 'formula', '--dest', DIRS.out], {
+        stdio: ['ignore', 'pipe', 'pipe', 'ipc']
+      });
+
+    let res = "";
+    node.stdout.on('data', (data) => {
+      res += data;
+    });
+
+    node.on('close', (code) => {
+      expect(code).to.equal(0);
+      expect(res).to.match(/dest:[\s\S]*test\.html/);
+
+      fixtures.verify(testGlob, done);
+    });
+  });
 
   it("A set of converters is determined based on input content automatically");
 

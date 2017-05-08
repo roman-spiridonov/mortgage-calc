@@ -1,6 +1,8 @@
 /*jshint bitwise: false*/
 "use strict";
 
+const fs = require("fs");
+
 function Helpers() {
 
 }
@@ -62,6 +64,13 @@ _p.mergeDeep = function (target, ...sources) {
   }
 
   return this.mergeDeep(target, ...sources);
+};
+
+_p.createDir = function(dir, cb) {
+  fs.exists(dir, (exists) => {
+    if (!exists) return fs.mkdir(dir, cb);
+    cb(null);
+  });
 };
 
 module.exports = new Helpers();

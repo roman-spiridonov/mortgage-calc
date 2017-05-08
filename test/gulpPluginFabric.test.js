@@ -9,36 +9,14 @@ const
   sinon = require('sinon'),
   gulp = require('gulp'),
   path = require('path'),
-  fs = require('fs'),
   async = require('async'),
 
 // Project modules
   formula = require('../parsers/formula/gulp-formula'),
-  marked = require('../parsers/marked/gulp-marked');
+  marked = require('../parsers/marked/gulp-marked'),
+  fixtures = require('./fixtures'),
+  DIRS = fixtures.DIRS;
 
-const DIRS = {
-  data: path.join(__dirname, 'fixtures', 'data'),
-  out: path.join(__dirname, 'fixtures', 'out'),
-  expected: path.join(__dirname, 'fixtures', 'expected'),
-};
-
-function removeDir(dir) {
-  if (fs.existsSync(dir)) {
-    let files = fs.readdirSync(dir);
-    for (let i in Object.keys(files)) {
-      fs.unlinkSync(path.join(dir, files[i]));
-    }
-    fs.rmdirSync(dir);
-  }
-}
-
-function dos2nix(fileStr) {
-  return fileStr.replace(/\r\n/g, "\n");
-}
-
-function checkFileStrEql(fileStr1, fileStr2) {
-  return ( dos2nix(fileStr1) === dos2nix(fileStr2) );
-}
 
 function doGulpTest(fileName, gulpSrcOptions, gulpPlugins, cb) {
   let gulpStream = gulp.src(path.join(DIRS.data, fileName), gulpSrcOptions);
@@ -52,24 +30,13 @@ function doGulpTest(fileName, gulpSrcOptions, gulpPlugins, cb) {
 
   return gulpStream
     .pipe(gulp.dest(DIRS.out))
-    .on('end', function () {
-      let fileStrActual, fileStrExpected;
-      try {
-        fileStrActual = fs.readFileSync(path.join(DIRS.out, fileName), {encoding: "utf-8"});
-        fileStrExpected = fs.readFileSync(path.join(DIRS.expected, fileName), {encoding: "utf-8"});
-      } catch (err) {
-        throw err;
-      }
-
-      expect(checkFileStrEql(fileStrActual, fileStrExpected)).to.be.true;
-      cb();
-    });
+    .on('end', () => fixtures.verify(fileName, cb));
 }
 
 
 describe("gulpPluginFabric", function () {
   beforeEach(function () {
-    removeDir(DIRS.out);
+    fixtures.removeDir(DIRS.out);
   });
 
   it("Works by default in gulp", function (done) {
