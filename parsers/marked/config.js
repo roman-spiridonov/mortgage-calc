@@ -27,6 +27,16 @@ let defaults = {
 
   meta: {
     marked: {
+      codeHighlight: {
+        enabled: {
+          type: 'boolean',
+          desc: 'is code highlighting enabled?'
+        },
+        library: {
+          type: 'string',
+          desc: 'code highlighting library (pygmentize-bundled or highlight.js)'
+        }
+      },
       gfm: {
         type: 'boolean',
         desc: "Enable GitHub flavored markdown."

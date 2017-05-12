@@ -40,7 +40,41 @@ _p.getDefault = function (propStr) {
  * Parse meta information for a config property in a format like "formula.output" and return its ref.
  */
 _p._getMeta = function (propStr, target = this) {
-  return this._getPropRef(propStr, target.meta);
+  // add defaults to yargs meta
+  let meta = this._getPropRef(propStr, target.meta);
+  let config = this._getPropRef(propStr, target);
+
+  config = this._normalizeMeta(config);
+  meta = this._normalizeMeta(meta);
+  helpers.mergeDeep(meta, (targetProp, sourceProp) => {
+    // do not create new object properties on target
+    if(helpers.isObject(sourceProp) && !targetProp) return true;
+  }, config);
+
+  return meta;
+};
+
+
+/**
+ * Plainifies meta object and wraps values into { default: ... }.
+ *
+ * @private
+ */
+_p._normalizeMeta = function (config) {
+  function _isMetaProp(prop) {
+    return !!(prop.desc && prop.type);
+  }
+
+  // make plain object, do not plainify already prepared meta props
+  let res = helpers.plainify(config, _isMetaProp);
+
+  // wrap in {default: ...}
+  for (let key of Object.keys(res)) {
+    if (_isMetaProp(res[key])) continue;
+    res[key] = {default: res[key]};
+  }
+
+  return res;
 };
 
 
