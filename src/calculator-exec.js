@@ -9,12 +9,12 @@ $(function(){
     this.init = function() {
       google.charts.load('current', { 'packages': ['corechart'] });
       google.charts.setOnLoadCallback(() => this.run());
-      qs('form').onsubmit = () => this.run();
 
       window.addEventListener('resize', () => _calculator.drawCharts());
     };
 
     this.run = function() {
+      qs('form').onsubmit = () => this.run();
       let params = _getParamsFromDOM();
       _calculator.init(params, _option);
       _calculator.run();

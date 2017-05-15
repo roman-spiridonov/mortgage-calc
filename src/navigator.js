@@ -3,7 +3,7 @@
 var Navigator = (function() {
   function Navigator($contentEl, nav = []) {
     this.$_contentEl = $contentEl;
-    this._nav = nav; // {1: {trigger: $trigger1, href: "#page1", pageUrl: 'templates/page1.hml', isLoaded: false}, 2: { ... }, ... }
+    this._nav = nav; // {1: {trigger: $trigger1, href: "#page1", pageUrl: 'fragments/page1.hml', isLoaded: false}, 2: { ... }, ... }
     this._count = nav.length || 0;
     this._active = null; // active trigger
   }

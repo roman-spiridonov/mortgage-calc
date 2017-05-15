@@ -1,12 +1,11 @@
 /* jshint ignore: start */
+"use strict";
 
 const http = require('http');
-// var url = require('url');
-// var querystring = require('querystring');
-const static = require('node-static');
-const config = require('./config');
+const nodeStatic = require('node-static');
+const nconf = require('./config').nconf;
 
-const file = new static.Server(config.isDevelopment ? 'src/' : 'webapp/', {
+const file = new nodeStatic.Server(nconf.get('isDevelopment') ? 'src/' : 'webapp/', {
   cache: 0
 });
 
@@ -15,8 +14,8 @@ function accept(req, res) {
 }
 
 if (!module.parent) {
-  http.createServer(accept).listen(config.port);
-  console.log('Server is running on port ' + config.port);
+  http.createServer(accept).listen(nconf.get('port'));
+  console.log('Server is running on port ' + nconf.get('port'));
 } else {
   exports.accept = accept;
 }

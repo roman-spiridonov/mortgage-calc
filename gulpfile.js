@@ -3,7 +3,7 @@
 const
   // Libraries
   gulp = require('gulp'),
-  sourcemaps = require('gulp-sourcemaps'),
+  // sourcemaps = require('gulp-sourcemaps'),
   debug = require('gulp-debug'),
   gulpIf = require('gulp-if'),
   del = require('del'),
@@ -43,9 +43,9 @@ if(isDevelopment) {
 } else {  // isDevelopment === false
   gulp.task('html', function () {  // TODO: 1) insert templates/, 2) change script refs to minimized file
     return gulp.src(path.join(src, '**/*.html'), {buffer: false})
-      .pipe(htmlReplace({'main': 'script.min.js', 'sub': ''}))
+      .pipe(htmlReplace({'js': 'script.min.js', 'cut': ''}))
       .pipe(marked())
-      .pipe(formula())
+      .pipe(formula({output: "html"}))
       .pipe(gulp.dest(dest)).pipe(debug());
   });
   

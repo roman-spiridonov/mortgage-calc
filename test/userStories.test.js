@@ -114,4 +114,5 @@ describe("user stories", function () {
   it("Files can be linked together and will be merged into one at destination");
 
   it("can register a new converter (and throws an error if it does not implement a specific interfrace)");
+
 });

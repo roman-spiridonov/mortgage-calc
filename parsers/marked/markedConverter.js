@@ -50,6 +50,13 @@ _p.init = function (options) {
  * @param cb
  */
 _p.convert = function (fileStr, cb) {
+  // doctype gets encoded fix: https://github.com/chjj/marked/issues/354
+  let regex = /^(<\!DOCTYPE[^<]*)/i,
+      matches = fileStr.match(regex),
+      hasDoctype = !!matches,
+      doctype = hasDoctype ? matches[0] : "";
+  fileStr = fileStr.replace(regex, "");
+
   let report = {
     converter: this._name
   };
@@ -62,7 +69,7 @@ _p.convert = function (fileStr, cb) {
       report.message = err.message;
     }
 
-    return cb(null, content, report);
+    return cb(null, hasDoctype ? content : doctype + content, report);
   });
 };
 
