@@ -15,6 +15,8 @@ let defaults = {
   converters: ["formula", "marked"],
   port: 8080,
   isDevelopment: false,
+  doStandalone: false,
+  doMinify: true,
 
   meta: {
     src: {

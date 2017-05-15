@@ -25,7 +25,7 @@
     <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
     <div class="container">
         <ul class="nav nav-tabs">
-            <li class="presentation nav__description"><a href="#descrpition">Descrpition</a></li>
+            <li class="presentation nav__description"><a href="#description">Descrpition</a></li>
             <li class="presentation nav__calculator active"><a href="#calculator">Calculator</a></li>
         </ul>
         <div class="content">
@@ -38,6 +38,15 @@
     <script src="navigator.js"></script>
     <script src='script.js'></script>
 <!-- endbuild -->
+
+    <script type="text/template" id="description">
+        <!-- inject:fragments/description.html -->
+        <!-- endinject -->
+    </script>
+    <script type="text/template" id="calculator">
+        <!-- inject:fragments/calculator.html -->
+        <!-- endinject -->
+    </script>
 </body>
 
 </html>

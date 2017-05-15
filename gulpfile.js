@@ -6,6 +6,8 @@ const
   // sourcemaps = require('gulp-sourcemaps'),
   debug = require('gulp-debug'),
   gulpIf = require('gulp-if'),
+  noop = require('gulp-noop'),
+  inject = require('gulp-inject'),
   del = require('del'),
   path = require('path'),
   cp = require('child_process'),
@@ -18,17 +20,15 @@ const
   formula = require('./parsers/formula/gulp-formula'),
   marked = require('./parsers/marked/gulp-marked');
 
-const isDevelopment = nconf.get('isDevelopment');
-const src = nconf.get('src');
-const dest = nconf.get('dest');
+const isDevelopment = nconf.get('isDevelopment'),
+  doStandalone = nconf.get('doStandalone'),
+  src = nconf.get('src'),
+  dest = nconf.get('dest');
 
-if (!isDevelopment) {
-  console.log('Gulp: executing a production build!');
-}
 
-if(isDevelopment) {
+if (isDevelopment) {
   gulp.task('html', function () {
-    return gulp.src(path.join(src,'**/*.html'), {buffer: false})
+    return gulp.src(path.join(src, '**/*.html'), {buffer: false})
       .pipe(gulp.dest(dest)).pipe(debug());
   });
 
@@ -41,20 +41,32 @@ if(isDevelopment) {
   });
 
 } else {  // isDevelopment === false
-  gulp.task('html', function () {  // TODO: 1) insert templates/, 2) change script refs to minimized file
-    return gulp.src(path.join(src, '**/*.html'), {buffer: false})
+  console.log('Gulp: executing a production build!');
+
+  gulp.task('html', function () {
+    let source = doStandalone ?
+      gulp.src(path.join(src, 'index.html')).pipe(inject(gulp.src(path.join(src, 'fragments/**/*.html')), {
+        starttag: '<!-- inject:{{path}} -->',
+        relative: true,
+        transform: function (filePath, file) {
+          return file.contents.toString('utf8');
+        }
+      }))
+      : gulp.src(path.join(src, '**/*.html'), {buffer: false});
+
+    return source
       .pipe(htmlReplace({'js': 'script.min.js', 'cut': ''}))
       .pipe(marked())
       .pipe(formula({output: "html"}))
       .pipe(gulp.dest(dest)).pipe(debug());
   });
-  
+
   gulp.task('js', function () {
     return gulp.src(path.join(src, '*.js'))
       .pipe(babel({presets: ['es2015']}))
       .pipe(concat('script.min.js'))
       .pipe(gulp.dest(dest)).pipe(debug())
-      .pipe(uglify())
+      .pipe(gulpIf(nconf.get('doMinify'), uglify(), noop))
       .pipe(gulp.dest(dest)).pipe(debug());
   });
 }
@@ -72,6 +84,7 @@ gulp.task('build', gulp.series(
   'clean',
   gulp.parallel('html', 'js', 'static')
 ));
+
 
 if (isDevelopment) {
   gulp.task('watch:static', function () {
