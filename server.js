@@ -1,21 +1,26 @@
 /* jshint ignore: start */
 "use strict";
 
-const http = require('http');
-const nodeStatic = require('node-static');
-const nconf = require('./config').nconf;
+const
+  http = require('http'),
+  nodeStatic = require('node-static'),
+  nconf = require('./config').nconf;
 
-const file = new nodeStatic.Server(nconf.get('isDevelopment') ? 'src/' : 'webapp/', {
-  cache: 0
-});
+const
+  serverRoot = nconf.get('serveFromSrc') && nconf.get('isDevelopment') ? nconf.get('src') : nconf.get('dest'),
+  port = nconf.get('port'),
+  file = new nodeStatic.Server(serverRoot, {
+    cache: 0
+  });
 
 function accept(req, res) {
   file.serve(req, res);
 }
 
 if (!module.parent) {
-  http.createServer(accept).listen(nconf.get('port'));
-  console.log('Server is running on port ' + nconf.get('port'));
+  http.createServer(accept).listen(port);
+  console.log(`Server is running on port ${port}`);
+  console.log(`Serving ${serverRoot}`)
 } else {
   exports.accept = accept;
 }

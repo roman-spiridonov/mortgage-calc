@@ -14,9 +14,8 @@ let defaults = {
   dest: "webapp",
   converters: ["formula", "marked"],
   port: 8080,
-  isDevelopment: false,
-  doStandalone: false,
-  doMinify: true,
+  serveFromSrc: false,
+  isDevelopment: true,
 
   meta: {
     src: {
@@ -40,17 +39,13 @@ let defaults = {
       desc: "port to run server on",
       type: "number"
     },
+    serveFromSrc: {
+      desc: "if true, the static server will run on src/ folder in development mode (use when your code does not need transpiling)",
+      type: "boolean"
+    },
     isDevelopment: {
       desc: "if false, runs in production mode (may affect gulp tasks)",
       type: "boolean"
-    },
-    mainScriptBlockLabel: {
-      desc: `Script tags wrapped into <!-- build:yourLabel -->...<!--endbuild-->, will be concatenated and minified.`,
-      type: "string"
-    },
-    subordinateScriptBlockLabel: {
-      desc: `Script tags wrapped into <!-- build:yourLabel -->...<!--endbuild-->, will be removed to avoid duplication after concatenation.`,
-      type: "string"
     }
   }
 };

@@ -10,8 +10,7 @@ module.exports = {
     "$": true,
     "_": true,
     "chrome": true,
-    "google": true,
-    "qs": true,
+    "google": true
   },
 
   "rules": {

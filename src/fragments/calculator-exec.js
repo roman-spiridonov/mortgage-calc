@@ -1,5 +1,6 @@
-/* global calculator */
 "use strict";
+
+const calculator = require('../calculator');
 
 $(function(){
   function CalculatorInstance() {
@@ -14,7 +15,7 @@ $(function(){
     };
 
     this.run = function() {
-      qs('form').onsubmit = () => this.run();
+      $('form').on('submit', () => this.run());
       let params = _getParamsFromDOM();
       _calculator.init(params, _option);
       _calculator.run();
@@ -22,19 +23,18 @@ $(function(){
     };
 
     function _getParamsFromDOM() {
-      let f = 1 + parseFloat(qs('#deposit').value) / 1200;
-      let Gm = parseFloat(qs('#credit').value) / 1200;
-      let h = 1 + parseFloat(qs('#inflation').value) / 1200;
-      let w = 1 + parseFloat(qs('#wage-growth').value) / 1200;
-      let R = parseFloat(qs('#rent').value);
-      let A = parseFloat(qs('#start').value);
-      let B = parseFloat(qs('#payment').value);
-      let S = parseFloat(qs('#sum').value);
+      let f = 1 + parseFloat($('#deposit').val()) / 1200;
+      let Gm = parseFloat($('#credit').val()) / 1200;
+      let h = 1 + parseFloat($('#inflation').val()) / 1200;
+      let w = 1 + parseFloat($('#wage-growth').val()) / 1200;
+      let R = parseFloat($('#rent').val());
+      let A = parseFloat($('#start').val());
+      let B = parseFloat($('#payment').val());
+      let S = parseFloat($('#sum').val());
 
       return [f, Gm, h, w, R, A, B, S];
     }
   }
-
 
   let calc = new CalculatorInstance();
   calc.init();

@@ -52,7 +52,7 @@ _p.isObject = function (item) {
  */
 _p.mergeDeep = function (target, skipFunc, ...sources) {
   let hasSkipFunction = true;
-  if(skipFunc && (typeof skipFunc !== 'function')) {
+  if (skipFunc && (typeof skipFunc !== 'function')) {
     // first source is in place of skipFunc
     sources.unshift(skipFunc);
     hasSkipFunction = false;
@@ -89,7 +89,7 @@ _p.plainify = function (target, condition) {
   let keys = Object.keys(res);
 
   for (let key of keys) {
-    if (this.isObject(res[key]) && (!condition || !condition(res[key])) ) {
+    if (this.isObject(res[key]) && (!condition || !condition(res[key]))) {
       this.plainify(res[key], condition, key, res, keys, true);
       // moved all properties to parent, can remove empty object
       delete res[key];
@@ -114,5 +114,17 @@ _p.createDir = function (dir, cb) {
     cb(null);
   });
 };
+
+_p.removeDirIfEmptySync = function (dirname) {
+  try {
+    let files = fs.readdirSync(dirname);
+    if (!files.length) {
+      fs.rmdirSync(dirname);
+    }
+  } catch (e) {
+    throw e;
+  }
+};
+
 
 module.exports = new Helpers();

@@ -1,5 +1,6 @@
-/* global Navigator */
 "use strict";
+
+const Navigator = require('./navigator');
 
 $(function() {
   let mainNavigator = new Navigator($(".content").first());
