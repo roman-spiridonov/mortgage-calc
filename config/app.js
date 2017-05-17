@@ -16,6 +16,7 @@ let defaults = {
   port: 8080,
   serveFromSrc: false,
   isDevelopment: true,
+  entryPoints: ['script.js', 'fragments/*.js'],
 
   meta: {
     src: {
@@ -46,6 +47,10 @@ let defaults = {
     isDevelopment: {
       desc: "if false, runs in production mode (may affect gulp tasks)",
       type: "boolean"
+    },
+    entryPoints: {
+      desc: "paths relative to src to entry points of application",
+      type: "array"
     }
   }
 };

@@ -3,6 +3,8 @@
 const
   // Libraries
   path = require('path'),
+  glob = require('glob'),
+  del = require('del'),
   fs = require('fs'),
   cp = require('child_process'),
   browserify = require('browserify'),
@@ -10,38 +12,30 @@ const
   bs = require('browser-sync').create(),
   source = require('vinyl-source-stream'),
   buffer = require('vinyl-buffer'),
+
   gulp = require('gulp'),
-  sourcemaps = require('gulp-sourcemaps'),
-  debug = require('gulp-debug'),
-  gulpIf = require('gulp-if'),
-  noop = require('gulp-noop'),
-  inject = require('gulp-inject'),
-  del = require('del'),
-  concat = require('gulp-concat'),
-  uglify = require('gulp-uglify'),
-  babel = require('gulp-babel'),
-  htmlReplace = require('gulp-html-replace'),
-  gutil = require('gulp-util'),
+  $ = require('gulp-load-plugins')(),
+
   // Project files
   helpers = require('./helpers'),
   nconf = require('./config').nconf,
   formula = require('./parsers/formula/gulp-formula'),
   marked = require('./parsers/marked/gulp-marked');
 
-const isDevelopment = nconf.get('isDevelopment'),
+const isDevelopment = nconf.get('NODE_ENV') || nconf.get('isDevelopment'),
   src = nconf.get('src'),
   dest = nconf.get('dest');
 
 
 gulp.task('html-inject', function () {
   return gulp.src(path.join(dest, 'index.html'))
-    .pipe(gulpIf((file) => /index\.html/.test(file.path), // execute inject only on index.html
-      inject(gulp.src(path.join(dest, 'fragments/**/*.html')), {
+    .pipe($.if((file) => /index\.html/.test(file.path), // execute inject only on index.html
+      $.inject(gulp.src(path.join(dest, 'fragments/**/*.html')), {
         starttag: '<!-- inject:{{path}} -->',
         relative: true,
         transform: function (filePath, file) {
           let res = file.contents.toString('utf8');
-          gutil.log(`Fragment ${filePath} loaded`);
+          $.util.log(`Fragment ${filePath} loaded`);
           return res;
         }
       })))
@@ -54,7 +48,7 @@ gulp.task('html-remove-injected', function (cb) {
     if (err) return cb(err);
     let results = data.match(/<!--\s*inject:(\S*)\s*-->([\s\S]*?)<!--\s*endinject\s*-->/g);
     if (!results) {
-      gutil.log(`No injections to index.html`);
+      $.util.log(`No injections to index.html`);
       return cb();
     }
     // remove injected fragments
@@ -64,7 +58,7 @@ gulp.task('html-remove-injected', function (cb) {
         contents = results[2];
       if (!contents.trim().length) return;
 
-      gutil.log(`Injected fragment: ${filePath}`);
+      $.util.log(`Injected fragment: ${filePath}`);
       try {
         let fullFilePath = path.join(dest, filePath);
         del.sync(fullFilePath);
@@ -82,35 +76,42 @@ gulp.task('html-main', function () {
   return gulp.src(path.join(src, '**/*.html'), {buffer: false})
     .pipe(marked())
     .pipe(formula({output: "html"}))
-    .pipe(htmlReplace({'js': isDevelopment ? 'script.js' : 'script.min.js', 'cut': ''}))
-    .pipe(gulp.dest(dest)).pipe(debug());
+    .pipe($.htmlReplace({'js': isDevelopment ? 'script.js' : 'script.min.js', 'cut': ''}))
+    .pipe(gulp.dest(dest)).pipe($.debug());
 });
 
 gulp.task('html', gulp.series('html-main', 'html-inject', 'html-remove-injected'));
 
 
 gulp.task('js', function () {
-  let b = browserify({
-    entries: [path.join(src, 'script.js'), path.join(src, 'fragments', 'calculator-exec.js')],
+  let entries = [];
+  nconf.get('entryPoints').forEach(function (entry) {
+    entries.push(glob.sync(path.join(src, entry)));
+  });
+
+  let bConfig = {
+    entries: entries,
     debug: isDevelopment,
     transform: [babelify]
-  });
+  };
+
+  let b = browserify(bConfig);
 
   return b.bundle()
     .pipe(source('script.js'))
     .pipe(buffer())  // convert stream to buffer for gulp-uglify
-    .pipe(gulpIf(isDevelopment, sourcemaps.init({loadMaps: true})))
-    .pipe(gulpIf(!isDevelopment, uglify()))
-    .pipe(gulpIf(!isDevelopment, concat('script.min.js')))
-    .on('error', gutil.log)
-    .pipe(gulpIf(isDevelopment, sourcemaps.write('./')))
+    .pipe($.if(isDevelopment, $.sourcemaps.init({loadMaps: true})))
+    .pipe($.if(!isDevelopment, $.uglify()))
+    .pipe($.if(!isDevelopment, $.concat('script.min.js')))
+    .pipe($.if(isDevelopment, $.sourcemaps.write()))
     .pipe(gulp.dest(dest));
 });
 
 
 gulp.task('static', function () {
   return gulp.src(path.join(src, '*.{css,png,json}'), {buffer: false})
-    .pipe(gulp.dest(dest)).pipe(debug());
+    .pipe($.cached())
+    .pipe(gulp.dest(dest)).pipe($.debug());
 });
 
 gulp.task('clean', function () {
@@ -122,30 +123,50 @@ gulp.task('build', gulp.series(
   gulp.parallel('html', 'js', 'static')
 ));
 
+gulp.task('lint', function () {
+  return gulp.src(path.join(src, '**/*.js'))
+    .pipe($.eslint())
+    .pipe($.eslint.format());
+});
+
+gulp.task('serve', function () {
+  let serverRoot = nconf.get('serveFromSrc') && isDevelopment ? src : dest;
+  bs.init({
+    server: {baseDir: serverRoot}
+    // proxy: {target: `localhost:${nconf.get("port")}`}
+  });
+  bs.watch(path.join(dest, '**/*.*')).on('change', bs.reload);
+});
+
+gulp.task('watch:static', function () {
+  let watcher = gulp.watch(path.join(src, '*.{css,png,json}'), gulp.series('static'));  // webpack
+
+  // https://github.com/gulpjs/gulp/blob/4.0/docs/recipes/handling-the-delete-event-on-watch.md
+  watcher.on('unlink', function (filepath) {
+    let filePathFromSrc = path.relative(path.resolve(src), filepath);
+    let destFilePath = path.resolve(dest, filePathFromSrc);
+    del.sync(destFilePath);
+  });
+
+  return watcher;
+});
+
+gulp.task('watch:html', function () {
+  return gulp.watch(path.join(src, '**/*.html'), gulp.series('html'));
+});
+gulp.task('watch:js', function () {
+  return gulp.watch(path.join(src, '**/*.js'), gulp.series('js'));
+});
+gulp.task('watch', gulp.series(gulp.parallel('watch:static', 'watch:html', 'watch:js')));
+
+
+gulp.task('dev', gulp.series('build', gulp.parallel('watch', 'serve')));
+gulp.task('prod', gulp.series('build'));
 
 if (isDevelopment) {
-  gulp.task('serve', function () {
-    bs.init({
-      server: {baseDir: dest}
-      // proxy: {target: `localhost:${nconf.get("port")}`}
-    });
-    bs.watch(path.join(dest,'**/*.*')).on('change', bs.reload);
-  });
-
-  gulp.task('watch:static', function () {
-    return gulp.watch(path.join(src, '*.{css,png,json}'), gulp.series('static'));  // webpack
-  });
-  gulp.task('watch:html', function () {
-    return gulp.watch(path.join(src, '**/*.html'), gulp.series('html'));
-  });
-  gulp.task('watch:js', function () {
-    return gulp.watch(path.join(src, '**/*.js'), gulp.series('js'));
-  });
-  gulp.task('watch', gulp.series(gulp.parallel('watch:static', 'watch:html', 'watch:js')));
-
-  gulp.task('default', gulp.series('build', gulp.parallel('watch', 'serve')));
-
-} else {  // isDevelopment == false
+  console.log('Gulp: executing a development build.');
+  gulp.task('default', gulp.series('dev'));
+} else {
   console.log('Gulp: executing a production build!');
-  gulp.task('default', gulp.series('build'));
+  gulp.task('default', gulp.series('prod'));
 }
