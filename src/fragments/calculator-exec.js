@@ -2,20 +2,22 @@
 
 const calculator = require('../calculator');
 
-$(function(){
+$(function () {
   function CalculatorInstance() {
     let _calculator = calculator;
     let _option = 1;
 
-    this.init = function() {
-      google.charts.load('current', { 'packages': ['corechart'] });
-      google.charts.setOnLoadCallback(() => this.run());
+    this.init = function () {
+      google.charts.load('current', {'packages': ['corechart']});
+      google.charts.setOnLoadCallback(() => {
+        $('form').on('submit', () => this.run());
+        this.run();
+      });
 
       window.addEventListener('resize', () => _calculator.drawCharts());
     };
 
-    this.run = function() {
-      $('form').on('submit', () => this.run());
+    this.run = function () {
       let params = _getParamsFromDOM();
       _calculator.init(params, _option);
       _calculator.run();

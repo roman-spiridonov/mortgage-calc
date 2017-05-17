@@ -11,19 +11,22 @@ function Navigator($contentEl, nav = []) {
 
 const _p = Navigator.prototype;
 
-_p.activate = function () {
+_p.activate = function (arg0, cb) {
   if (this._count <= 0) {
     console.error("Add at least one trigger to Navigator before setting it to active.");
   }
 
-  let [id, href, pageUrl, isFound] = this._parseArgument(arguments[0]);
+  let [id, href, pageUrl, isFound] = this._parseArgument(arg0);
   if (isFound) {
     this._nav[id].trigger.trigger("click");
     this._nav[id].trigger.addClass("active");
+    this._active = id;
+
   } else {
-    console.error(`The element ${arguments[0]} was not found`);
+    console.error(`The element ${arg0} was not found`);
   }
-  this._active = id;
+
+  cb && cb.call(this, arg0);
 };
 
 
@@ -49,9 +52,7 @@ _p._onClick = function (arg0, $trigger, cb) {
     $(this._nav[this._active].href, this.$_contentEl).hide();
   }
 
-  this._load(id, (id) => {
-    this._nav[id].isLoaded = true;
-  });
+  this._load(id);
 
   this._active = id;
   $trigger.addClass('active');
@@ -80,18 +81,20 @@ _p._load = function (arg0, cb) {
           if (status === "error") {
             console.error(xhr.status + " " + xhr.statusText);
           }
-          cb.call(this, id);
+          cb && cb.call(this, id);
         });
       } else {
         $contentDiv.html(contents);
       }
+      this._nav[id].isLoaded = true;
+
     } else { // HTML was already loaded
       $(href, this.$_contentEl).show();
     }
   } else {
-    console.error(`The element ${arguments[0]} was not found`);
+    console.error(`The element ${arg0} was not found`);
   }
-  cb.call(this, id);
+  cb && cb.call(this, id);
 };
 
 
@@ -131,15 +134,15 @@ _p._parseArgument = function (arg) {
     isFound = false;
 
   if (typeof(arg) === "number") { // id
-    id = arguments[0];
+    id = arg;
     if (id in this._nav) {
       href = this._nav[id].href;
       pageUrl = this._nav[id].pageUrl;
       isFound = true;
     }
 
-  } else if (typeof(arg) === "string" && arguments[0].slice(0, 1) === '#') { // href
-    href = arguments[0];
+  } else if (typeof(arg) === "string" && arg.slice(0, 1) === '#') { // href
+    href = arg;
     for (let key in this._nav) {
       if (this._nav[key].href === href) {
         id = key;
@@ -150,7 +153,7 @@ _p._parseArgument = function (arg) {
     }
 
   } else if (typeof(arg) === "string") { // pageUrl
-    pageUrl = arguments[0];
+    pageUrl = arg;
     for (let key in this._nav) {
       if (encodeURIComponent(this._nav[key][pageUrl]) === encodeURIComponent(pageUrl)) {
         id = key;
