@@ -1,5 +1,7 @@
 "use strict";
 
+const $ = require('jquery');
+
 const calculator = require('../calculator');
 
 $(function () {

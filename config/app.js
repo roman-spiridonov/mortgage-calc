@@ -17,7 +17,13 @@ let defaults = {
   serveFromSrc: false,
   isDevelopment: true,
   entryPoints: ['script.js', 'fragments/*.js'],
-
+  vendors: {
+    "jquery": "https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.1/jquery.min.js",
+    "bootstrap": "https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js",
+    "mathjax": "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML"
+  },
+  globals: { jquery: '$' },
+  isCDN: false,
   meta: {
     src: {
       desc: "Source folder",
@@ -51,6 +57,18 @@ let defaults = {
     entryPoints: {
       desc: "paths relative to src to entry points of application",
       type: "array"
+    },
+    vendors: {
+      desc: "map of contained vendor libraries (npm installed) to CDN links",
+      type: "array"
+    },
+    globals: {
+      desc: "Object that maps dependencies (package names) to the exported global variables in CDN build",
+      type: "object"
+    },
+    isCDN: {
+      desc: "true if the result of the build should contain CDN libraries",
+      type: "boolean"
     }
   }
 };

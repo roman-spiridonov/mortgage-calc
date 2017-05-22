@@ -1,5 +1,7 @@
 "use strict";
 
+const $ = require('jquery');
+
 const Navigator = require('./navigator');
 
 $(function() {

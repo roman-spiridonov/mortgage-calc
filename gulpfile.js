@@ -7,11 +7,14 @@ const
   del = require('del'),
   fs = require('fs'),
   cp = require('child_process'),
+  exposify = require('exposify'),
   browserify = require('browserify'),
   babelify = require('babelify'),
   bs = require('browser-sync').create(),
   source = require('vinyl-source-stream'),
   buffer = require('vinyl-buffer'),
+  resolve = require('resolve'),
+  _ = require('lodash'),
 
   gulp = require('gulp'),
   $ = require('gulp-load-plugins')(),
@@ -22,10 +25,15 @@ const
   formula = require('./parsers/formula/gulp-formula'),
   marked = require('./parsers/marked/gulp-marked');
 
-const isDevelopment = nconf.get('NODE_ENV') || nconf.get('isDevelopment'),
+let isDevelopment = nconf.get('NODE_ENV') || nconf.get('isDevelopment'),
   src = nconf.get('src'),
-  dest = nconf.get('dest');
+  dest = nconf.get('dest'),
+  vendors = nconf.get('vendors'),
+  isCDN = nconf.get('isCDN');
 
+let
+  vendorsArray = _.keys(vendors),
+  CDNArray = _.values(vendors);
 
 gulp.task('html-inject', function () {
   return gulp.src(path.join(dest, 'index.html'))
@@ -76,14 +84,39 @@ gulp.task('html-main', function () {
   return gulp.src(path.join(src, '**/*.html'), {buffer: false})
     .pipe(marked())
     .pipe(formula({output: "html"}))
-    .pipe($.htmlReplace({'js': isDevelopment ? 'script.js' : 'script.min.js', 'cut': ''}))
+    .pipe($.htmlReplace({
+      'js': isDevelopment ? 'script.js' : 'script.min.js',
+      'cut': '',
+      'vendor': isCDN ? CDNArray : (isDevelopment ? 'vendor.js' : 'vendor.min.js')
+    }))
     .pipe(gulp.dest(dest)).pipe($.debug());
 });
 
 gulp.task('html', gulp.series('html-main', 'html-inject', 'html-remove-injected'));
 
+gulp.task('js:vendor', function () {
+  let b = browserify({
+    debug: isDevelopment,
+    noParse: vendorsArray,
+    transform: [babelify],
+  });
 
-gulp.task('js', function () {
+  vendorsArray.forEach((vendor) => {
+    b.require(resolve.sync(vendor), { expose: vendor });
+  });
+
+  return b.bundle()
+    .pipe(source('vendor.js'))
+    .pipe(buffer())
+    .pipe($.if(isDevelopment, $.sourcemaps.init({loadMaps: true})))
+    .pipe($.if(!isDevelopment, $.uglify()))
+    .pipe($.if(!isDevelopment, $.concat('vendor.min.js')))
+    .pipe($.if(isDevelopment, $.sourcemaps.write()))
+    .pipe(gulp.dest(dest));
+});
+
+
+gulp.task('js:app', function () {
   let entries = [];
   nconf.get('entryPoints').forEach(function (entry) {
     entries.push(glob.sync(path.join(src, entry)));
@@ -96,6 +129,14 @@ gulp.task('js', function () {
   };
 
   let b = browserify(bConfig);
+  b.external(vendorsArray);
+
+  // Exposing globals for CDN build
+  if(isCDN) {
+    b.transform('exposify', {
+      expose: nconf.get('globals')
+    });
+  }
 
   return b.bundle()
     .pipe(source('script.js'))
@@ -106,6 +147,8 @@ gulp.task('js', function () {
     .pipe($.if(isDevelopment, $.sourcemaps.write()))
     .pipe(gulp.dest(dest));
 });
+
+gulp.task('js', gulp.parallel('js:app', 'js:vendor'));
 
 
 gulp.task('static', function () {
@@ -155,13 +198,13 @@ gulp.task('watch:html', function () {
   return gulp.watch(path.join(src, '**/*.html'), gulp.series('html'));
 });
 gulp.task('watch:js', function () {
-  return gulp.watch(path.join(src, '**/*.js'), gulp.series('js'));
+  return gulp.watch(path.join(src, '**/*.js'), gulp.series('js:app'));
 });
 gulp.task('watch', gulp.series(gulp.parallel('watch:static', 'watch:html', 'watch:js')));
 
 
-gulp.task('dev', gulp.series('build', gulp.parallel('watch', 'serve')));
-gulp.task('prod', gulp.series('build'));
+gulp.task('dev', gulp.series((done) => { isDevelopment = true; done(); }, 'build', gulp.parallel('watch', 'serve')));
+gulp.task('prod', gulp.series((done) => { isDevelopment = false; done(); }, 'build'));
 
 if (isDevelopment) {
   console.log('Gulp: executing a development build.');
@@ -169,4 +212,14 @@ if (isDevelopment) {
 } else {
   console.log('Gulp: executing a production build!');
   gulp.task('default', gulp.series('prod'));
+}
+
+function getNPMPackages() {
+  let packageManifest = {};
+  try {
+    packageManifest = require('./package.json');
+  } catch (e) {
+    console.error("No package.json is available.");
+  }
+  return _.keys(packageManifest.dependencies) || [];
 }

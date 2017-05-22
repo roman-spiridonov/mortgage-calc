@@ -1,5 +1,7 @@
 "use strict";
 
+const $ = require('jquery');
+
 module.exports = Navigator;
 
 function Navigator($contentEl, nav = []) {
