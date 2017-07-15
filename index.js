@@ -3,7 +3,7 @@
  */
 const gulp = require('gulp');
 
-require('gulpfile');
+require('./gulpfile');
 
 module.exports = function run(task) {
   gulp.start(task || 'default');
