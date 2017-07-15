@@ -1,9 +1,14 @@
+#!/usr/bin/env node
+
+/* eslint no-console:off */
+
 /**
  * Created by Roman Spiridonov <romars@phystech.edu> on 7/15/2017.
  */
 "use strict";
 
-const run = require('../index.js');
+const gulp = require('gulp');
+require('../index.js')();
 
 process.once("uncaughtException", err => {
   console.log("\nuncaughtException: Something went wrong!\n");
@@ -12,4 +17,4 @@ process.once("uncaughtException", err => {
   process.exitCode = 1;
 });
 
-run(process.argv[1]);
+gulp.series(process.argv[1] || 'default');

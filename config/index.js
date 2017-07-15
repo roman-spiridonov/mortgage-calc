@@ -8,16 +8,15 @@ const
   path = require('path'),
 
   Config = require('./config').Config,
-  appConfig = require('./app'),
-  userConfig = require('../.user-config');
+  appConfig = require('./app');
 
-exports.config = new Config(appConfig.config, appConfig.defaults);  // default config
+module.exports = function config(userConfig) {
+  return nconf
+    .env()
+    .argv()
+    .use('literal', userConfig)
+    .defaults(exports.config);
+};
 
-// Actual (nconf) config
-nconf
-  .env()
-  .argv()
-  .use('literal', userConfig)
-  .defaults(exports.config);
-
-exports.nconf = nconf;
+module.exports.nconf = nconf;
+module.exports.config = new Config(appConfig.config, appConfig.defaults);  // default config

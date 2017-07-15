@@ -1,10 +1,11 @@
 /**
  * Created by Roman Spiridonov <romars@phystech.edu> on 7/15/2017.
  */
+"use strict";
+
 const gulp = require('gulp');
 
-require('./gulpfile');
-
-module.exports = function run(task) {
-  gulp.start(task || 'default');
+module.exports = function main(userConfig) {
+  require('./config')(userConfig);
+  require('./gulpfile');
 };
