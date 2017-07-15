@@ -5,6 +5,7 @@
   "main": "server.js",
   "dependencies": {
     "bootstrap": "^3.3.7",
+    "gulp-plugin-fabric": "^0.1.0",
     "jquery": "^3.2.1",
     "mathjax": "^2.7.1"
   },

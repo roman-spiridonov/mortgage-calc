@@ -6,4 +6,4 @@
 const FormulaConverter = require('./formulaConverter').FormulaConverter;
 
 let fc = new FormulaConverter();
-module.exports = require('../gulpPluginFabric')(fc._name, fc.convert.bind(fc), fc.init.bind(fc));
+module.exports = require('gulp-plugin-fabric')(fc._name, fc.convert.bind(fc), fc.init.bind(fc));
