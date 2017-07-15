@@ -5,4 +5,5 @@
 
 const MarkedConverter = require('./markedConverter').MarkedConverter;
 
-module.exports = require('../gulpPluginFabric')(MarkedConverter);
+let mc = new MarkedConverter();
+module.exports = require('../gulpPluginFabric')(mc._name, mc.convert.bind(mc), mc.init.bind(mc));

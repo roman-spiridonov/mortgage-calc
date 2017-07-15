@@ -9,37 +9,28 @@ const
   PluginError = gutil.PluginError;
 
 /**
- * @name Converter
- * @type constructor
- * @description class that implements functions init(options) and convert(fileStr, cb)
- */
-/**
  * Fabric that creates a gulp plug-in for a specified Converter class.
- * @param Converter {Converter}
+ * @param [onInit] {function} - call this function with options passed to a plugin
+ * @param onRun {function} - call this function with the data being piped, passing options as a second argument
  * @param name {string} - specify to change the default name of the converter
  * @returns {function}
  */
-module.exports = function(Converter, name) {
-  const c = new Converter();
-
-  if (name === undefined) {
-    name = Converter.prototype._name;
-  }
-  const PLUGIN_NAME = 'gulp-' + name;
+module.exports = function(name, onRun, onInit) {
+  const PLUGIN_NAME = 'gulp-' + name || 'undefined';
 
   return function gulpPlugin(options) {
-    c.init(options);
+    onInit && onInit(options);
 
     return through.obj(function (file, enc, cb) {
       if (file.isNull()) {
-        return cb(new PluginError(PLUGIN_NAME, "Gulp-formula needs file contents to be read. Try removing {read: false}."));
+        return cb(new PluginError(PLUGIN_NAME, `${PLUGIN_NAME} needs file contents to be read. Try removing {read: false}.`));
 
       } else if (file.isBuffer()) {
         let fileStr = file.contents.toString();
         runConversion(fileStr);
 
       } else if (file.isStream()) {
-        // Converter requires full string to process
+        // Function call requires full string to process
         let fileStr = '';
         file.contents
           .on('data', (data) => { fileStr+=data; })
@@ -47,7 +38,7 @@ module.exports = function(Converter, name) {
       }
 
       function runConversion(fileStr) {
-        c.convert(fileStr, (err, preparedFileStr, report) => {
+        onRun(fileStr, (err, preparedFileStr, report) => {
           if (err) return cb(new PluginError(PLUGIN_NAME, err.message));
           file.contents = new Buffer(preparedFileStr);
           cb(null, file);
