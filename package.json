@@ -1,8 +1,8 @@
 {
-  "name": "mortgage-calc",
-  "version": "0.0.1",
-  "description": "Страница и скрипт для расчета более выгодного варианта: **Ипотека или Аренда квартиры**.",
-  "main": "server.js",
+  "name": "PageGenJS",
+  "version": "0.1.0",
+  "description": "Page generator using JavaScript on client and server.",
+  "main": "index.js",
   "dependencies": {
     "bootstrap": "^3.3.7",
     "gulp-plugin-fabric": "^0.1.0",
@@ -68,10 +68,11 @@
   },
   "homepage": "https://github.com/roman-spiridonov/mortgage-calc#readme",
   "keywords": [
-    "mortgage",
-    "rent",
-    "financial",
-    "calculator"
+    "generator",
+    "static-site-generator",
+    "markdown",
+    "formula",
+    "mathjax"
   ],
   "directories": {
     "test": "test"
