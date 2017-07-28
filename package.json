@@ -1,6 +1,6 @@
 {
   "name": "pagegenjs",
-  "version": "0.1.20",
+  "version": "0.1.21",
   "description": "Page generator using JavaScript on client and server.",
   "main": "index.js",
   "bin": {
@@ -59,14 +59,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/roman-spiridonov/mortgage-calc.git"
+    "url": "git+https://github.com/roman-spiridonov/PageGenJS"
   },
   "author": "Roman Spiridonov",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/roman-spiridonov/mortgage-calc/issues"
   },
-  "homepage": "https://github.com/roman-spiridonov/mortgage-calc#readme",
+  "homepage": "https://github.com/roman-spiridonov/PageGenJS#readme",
   "keywords": [
     "generator",
     "static-site-generator",
