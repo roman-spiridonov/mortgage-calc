@@ -158,8 +158,10 @@ _p.parse = function (fileStr, cb) {
  */
 _p._collectMath = function (mjData, options) {
   let hash = options.state.hash;
+  let prop = this._getOutputProperty();
+
   if (mjData.errors) {
-    console.error(mjData.errors);
+    console.error(`Formula ${options.state.sourceFormula} contains the following errors:\n`, mjData.errors);
     this._outstandingHandlers[hash]--;
     return;
   }
@@ -174,7 +176,6 @@ _p._collectMath = function (mjData, options) {
    * @property {string} [css] - css string for HTML output
    */
 
-  let prop = this._getOutputProperty();
   let parsedFormula = {
     output: this._options.output,
     sourceFormula: options.state.sourceFormula,
