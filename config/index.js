@@ -10,13 +10,15 @@ const
   Config = require('./config').Config,
   appConfig = require('./app');
 
-module.exports = function config(userConfig) {
-  return nconf
-    .env()
-    .argv()
-    .use('literal', userConfig)
-    .defaults(exports.config);
-};
+let config = new Config(appConfig.config, appConfig.defaults);
 
+nconf
+  .env()
+  .argv()
+  .defaults(config);
+
+module.exports = function config(userConfig) {
+  nconf.use('literal', userConfig);
+};
 module.exports.nconf = nconf;
-module.exports.config = new Config(appConfig.config, appConfig.defaults);  // default config
+module.exports.config = config;  // default config

@@ -1,6 +1,6 @@
 {
   "name": "pagegenjs",
-  "version": "0.1.21",
+  "version": "0.1.22",
   "description": "Page generator using JavaScript on client and server.",
   "main": "index.js",
   "bin": {

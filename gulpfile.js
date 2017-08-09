@@ -82,8 +82,8 @@ gulp.task('html-remove-injected', function (cb) {
 
 gulp.task('html-main', function () {
   return gulp.src(path.join(src, '**/*.html'), {buffer: false})
-    .pipe(marked())
     .pipe(formula({output: "html"}))
+    .pipe(marked())
     .pipe($.htmlReplace({
       'js': isDevelopment ? 'script.js' : 'script.min.js',
       'cut': '',
