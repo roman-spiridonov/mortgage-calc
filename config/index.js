@@ -5,9 +5,8 @@
 
 const
   nconf = require('nconf'),
-  path = require('path'),
 
-  Config = require('./config').Config,
+  Config = require('yargs-config').Config,
   appConfig = require('./app');
 
 let config = new Config(appConfig.config, appConfig.defaults);
@@ -17,8 +16,5 @@ nconf
   .argv()
   .defaults(config);
 
-module.exports = function config(userConfig) {
-  nconf.use('literal', userConfig);
-};
 module.exports.nconf = nconf;
 module.exports.config = config;  // default config

@@ -4,8 +4,9 @@
 "use strict";
 
 const gulp = require('gulp');
+const nconf = require('config').nconf;
 
 module.exports = function main(userConfig) {
-  require('./config')(userConfig);
+  nconf.use('literal', userConfig);
   require('./gulpfile');
 };
