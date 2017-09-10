@@ -22,7 +22,8 @@ const
   // Project files
   helpers = require('./helpers'),
   nconf = require('./config').nconf,
-  formula = require('./parsers/formula/gulp-formula'),
+  formula = require('gulp-mathjax-page'),
+  // formula = require('./parsers/formula/gulp-formula'),
   marked = require('./parsers/marked/gulp-marked');
 
 let isDevelopment = nconf.get('NODE_ENV') || nconf.get('isDevelopment'),
@@ -82,8 +83,11 @@ gulp.task('html-remove-injected', function (cb) {
 
 gulp.task('html-main', function () {
   return gulp.src(path.join(src, '**/*.html'), {buffer: false})
-    .pipe(formula({output: "html"}))
     .pipe(marked())
+    .pipe(formula({
+        mjpageConfig: {output: "html", singleDollars: true, tex: {processEscapes: true}},
+        // mjnodeConfig: {equationNumbers: "AMS"}
+    }))
     .pipe($.htmlReplace({
       'js': isDevelopment ? 'script.js' : 'script.min.js',
       'cut': '',

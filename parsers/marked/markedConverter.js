@@ -69,7 +69,13 @@ _p.convert = function (fileStr, cb) {
       report.message = err.message;
     }
 
-    return cb(null, hasDoctype ? content : doctype + content, report);
+    let output = hasDoctype ? content : doctype + content;
+
+    // HACKS
+    output = output.replace(/\\left{/g, "\\left\\{");
+    output = output.replace(/\\\n/g, "\\\\\n");
+
+    return cb(null, output, report);
   });
 };
 
