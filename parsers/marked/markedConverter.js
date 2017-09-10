@@ -73,7 +73,8 @@ _p.convert = function (fileStr, cb) {
 
     // HACKS
     output = output.replace(/\\left{/g, "\\left\\{");
-    output = output.replace(/\\\n/g, "\\\\\n");
+    output = output.replace(/(\\)(\s)/g, "$1$1$2");
+    // output = output.replace(/($$[\s\S]*?)(\\)(\s[\s\S]*?$$)/g, "$1$2$2$3");
 
     return cb(null, output, report);
   });

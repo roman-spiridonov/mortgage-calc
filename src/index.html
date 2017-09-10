@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+    <title>Mortgage vs. Rent decision making</title>
+    <meta name="description" content="" />
+    <meta name="keywords" content="" />
+    <meta name="author" content="Roman Spiridonov" />
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
+
+    <!-- build:vendor -->
+    <script src="../node_modules/jquery/src/jquery.js"></script>
+    <script src="../node_modules/bootstrap/dist/js/bootstrap.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+    <!-- endbuild -->
+
+	<script type="text/javascript" async
+	  src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML">
+	</script>
+</head>
+
+<body>
+    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+    <div class="container">
+        <ul class="nav nav-tabs">
+            <li class="presentation nav__description"><a href="#description">Descrpition</a></li>
+            <li class="presentation nav__calculator active"><a href="#calculator">Calculator</a></li>
+        </ul>
+        <div class="content">
+        </div>
+    </div>
+
+<!-- build:js -->
+    <script src='script.js'></script>
+<!-- endbuild -->
+
+    <script type="text/template" id="description">
+        <!-- inject:fragments/description.html -->
+        <!-- endinject -->
+    </script>
+    <script type="text/template" id="calculator">
+        <!-- inject:fragments/calculator.html -->
+        <!-- endinject -->
+    </script>
+
+</body>
+
+</html>

@@ -12,6 +12,7 @@ const
   async = require('async'),
 
 // Project modules
+  mathjax = require('gulp-mathjax-page'),
   formula = require('../parsers/formula/gulp-formula'),
   marked = require('../parsers/marked/gulp-marked'),
   fixtures = require('./fixtures'),
@@ -39,19 +40,35 @@ describe("gulpPluginFabric", function () {
     fixtures.removeDir(DIRS.out);
   });
 
-  it("Works by default in gulp", function (done) {
+  it("Works by default in gulp (formula)", function (done) {
     async.parallel([
-      (cb) => doGulpTest('formulas.html', {}, [{plugin: formula}], cb),
+      (cb) => doGulpTest('formulas.html', {}, [{plugin: formula, options: {mjpageConfig: {output: "html"}}}], cb),
       (cb) => doGulpTest('test.html', {}, [{plugin: formula}, {plugin: marked}], cb),
-      (cb) => doGulpTest('test.md', {}, [{plugin: marked}, {plugin: formula}], cb)
+      (cb) => doGulpTest('test.md', {}, [{plugin: marked}, {plugin: formula}], cb),
     ], done);
   });
+
+  it("Works by default in gulp (mathjax-page)", function (done) {
+    async.parallel([
+      (cb) => doGulpTest('test2.html', {}, [{plugin: marked},
+        {
+          plugin: mathjax,
+          options: {
+            mjpageConfig: {output: "svg", singleDollars: true, tex: {processEscapes: true}},
+            mjnodeConfig: {equationNumbers: "AMS"}
+          }
+        }
+      ], cb)
+    ], done);
+  });
+
+
 
   it("Works for stream of objects in gulp {buffer: false}", function (done) {
     async.parallel([
       (cb) => doGulpTest('formulas.html', {buffer: false}, [{plugin: formula}], cb),
       (cb) => doGulpTest('test.html', {buffer: false}, [{plugin: formula}, {plugin: marked}], cb),
-      (cb) => doGulpTest('test.md', {buffer: false}, [{plugin: marked}, {plugin: formula}], cb)
+      (cb) => doGulpTest('test.md', {buffer: false}, [{plugin: marked}, {plugin: formula}], cb),
     ], done);
   });
 
