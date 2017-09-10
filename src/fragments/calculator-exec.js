@@ -4,12 +4,11 @@ const $ = require('jquery');
 
 const calculator = require('../calculator');
 
-$(function () {
+$(function() {
   function CalculatorInstance() {
     let _calculator = calculator;
-    let _option = 1;
 
-    this.init = function () {
+    this.init = function() {
       google.charts.load('current', {'packages': ['corechart']});
       google.charts.setOnLoadCallback(() => {
         $('form').on('submit', () => this.run());
@@ -17,11 +16,19 @@ $(function () {
       });
 
       window.addEventListener('resize', () => _calculator.drawCharts());
+
+      $('#wage-growth').change((e) => {
+        _updateOption(e.target.value);
+      });
     };
 
-    this.run = function () {
+    this.run = function() {
       let params = _getParamsFromDOM();
-      _calculator.init(params, _option);
+
+      let option = _updateOption($('#wage-growth').val());
+      // let option = $('#option').val();
+
+      _calculator.init(params, parseFloat(option));
       _calculator.run();
       return false;
     };
@@ -37,6 +44,19 @@ $(function () {
       let S = parseFloat($('#sum').val());
 
       return [f, Gm, h, w, R, A, B, S];
+    }
+
+    function _updateOption(wage) {
+      let o;
+      if (wage <= 0.000000001) {
+        o = 1;
+      } else if (Math.abs(wage - $('#inflation').val()) <= 0.000000001) {
+        o = 2;
+      } else {
+        o = 3;
+      }
+      $('#option').val(o);
+      return o;
     }
   }
 

@@ -5,5 +5,6 @@
 
 module.exports = {
   // Override any options here
+  isCDN: true
 
 };

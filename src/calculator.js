@@ -15,7 +15,7 @@ const _p = Calculator.prototype;
 _p.findn = function () { // deposit
   let [f, Gm, h, w, R, A, B, S] = this._params;
   let fh = f / h;
-  if (this._option === 1 || this._option === 2) {
+  if (this._option === 2) {
     return Math.log((B + S * (fh - 1)) / (B + A * (1 - 1 / fh))) / Math.log(fh) || (S - A) / B;
   }
 
@@ -24,35 +24,35 @@ _p.findn = function () { // deposit
 
 _p.findm = function () { // credit
   let [f, Gm, h, w, R, A, B, S] = this._params;
+  let Wm = w - 1;
 
   if (this._option === 1) {
-    return Math.log(1 - Gm * (S - A) / (B + R)) / Math.log(1 / (1 + Gm));
-  } else if (this._option === 2) {
-    return Math.log(1 - (S - A) / (B + R) * (1 - h / (1 + Gm))) / Math.log(h / (1 + Gm));
-  } else if (this._option === 3) {
-    return Math.log(1 - (S - A) / (B + R) * (1 - w / (1 + Gm))) / Math.log(w / (1 + Gm));
+    return Math.log(1 - Gm * (S - A) / (B + R)) / Math.log(1 / (1 + Gm)) || (S-A)/(B+R);
+  } else {
+    return Math.log(1 - (Gm - Wm) * (S - A) / (B + R)) / Math.log(1 / (1 + Gm - Wm)) || (S-A)/(B+R);
   }
 };
 
 _p.fn = function (n) { // m(n) for arbitrary S
   let [f, Gm, h, w, R, A, B, S] = this._params;
+  let Wm = w - 1;
   let fh = f / h;
   if (this._option === 1) { // pay B+R each month
     return Math.log(1 - Gm * (this.Sn(n) - A) / (B + R)) / Math.log(1 / (1 + Gm));
   } else if (this._option === 2) { // pay (B+R)*h each month
-    return Math.log(1 - (this.Sn(n) - A) / (B + R) * (1 - h / (1 + Gm))) / Math.log(h / (1 + Gm));
+    return Math.log(1 - (this.Sn(n) - A) / (B + R) * (Gm-Wm)) / Math.log(1 / (1 + Gm-Wm));
   } else if (this._option === 3) { // w - speed of wages
-    return Math.log(1 - (this.Sn(n) - A) / (B + R) * (1 - w / (1 + Gm))) / Math.log(w / (1 + Gm));
+    return Math.log(1 - (this.Sn(n) - A) / (B + R) * (Gm-Wm)) / Math.log(1 / (1 + Gm-Wm));
   }
 };
 
 _p.Sn = function (n) { // S(n) - what cost of property one can afford when saving for n years at given params
   let [f, Gm, h, w, R, A, B, S] = this._params;
   let fh = f / h;
-  if (this._option === 1 || this._option === 2) {
-    return B / h * (Math.pow(fh, n) - 1) / (fh - 1) + A * Math.pow(fh, n - 1) * h || B * n + A;
-  } else if (this._option === 3) {
-    return B * Math.pow(w / h, n) / w * (Math.pow(f / w, n) - 1) / (f / w - 1) + A * Math.pow(fh, n - 1) * h || B * n + A;
+  if (this._option === 1) {
+    return B * f / Math.pow(h, n) * (Math.pow(f, n) - 1) / (f - 1) + A * Math.pow(fh, n) || B * n + A;
+  } else {
+    return B * fh * Math.pow(w/h, n-1) * ((Math.pow(f/w, n) - 1) / (f/w - 1)) + A * Math.pow(fh, n) || B * n + A;
   }
 
 };
@@ -136,8 +136,8 @@ _p.drawCharts = function (data) {
 
 /**
  * Initialize calculator instance before usage.
- * @param {Number} option - method of calculation
  * @param {Object} params - object containing input parameters of the model
+ * @param {Number} option - method of calculation
  */
 _p.init = function (params, option) {
   this._option = option || 1;
