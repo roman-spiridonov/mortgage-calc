@@ -17,4 +17,7 @@ process.once("uncaughtException", err => {
   process.exitCode = 1;
 });
 
-gulp.series(process.argv[1] || 'default');
+process.nextTick(function(){
+  const task = process.argv[2] || 'default';
+  gulp.task(task)();
+});

@@ -84,31 +84,7 @@ src/
 
 
 ## Подключение в другой проект
-Вариант 1: копируем репозиторий и делаем новый отчет в `src/`.
-
-Вариант 2: устанавливаем глобально и управляем сборкой командой `pagegen <имя задачи>`. 
-```bash
-$ npm i @romars/mortgage-calc -g
-$ pagegen 
-$ pagegen serve
-```
-
-Вариант 3: Устанавливаем на уровне проекта и подключаем в gulpfile.js, передавая настройки.
-Доступны все задачи через `gulp <имя_задачи>`.
-
-```bash
-$ npm i @romars/morgage-calc -D
-```
-
-В `gulpfile.js` своего проекта добавляем:
-```javascript
-const options = require('./.user-config');
-require('@romars/mortgage-calc')(options); 
-```
-
-Теперь стали доступны все `gulp` таски из `mortgage-calc`.
-
-Во всех вариантах, для настройки создаем файл в корне проекта `.user-config.js` (как показано [здесь](.user-config.js)).
+Копируем репозиторий и делаем новый отчет в `src/`.
                                    
 # Лицензия
 [MIT](http://www.opensource.org/licenses/MIT)
